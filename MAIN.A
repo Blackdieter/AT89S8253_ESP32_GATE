@@ -1,1 +1,125 @@
+data_7seg equ p0             ; 7-segment display connected to Port 0
+led1 bit p2.2                ; LED1 control bit
+led2 bit p2.3                ; LED2 control bit for enabling the 2nd 7-segment
+button1 bit p3.2             ; Button 1 input on Port 3.2
+button2 bit p3.3             ; Button 2 input on Port 3.3
+led_green bit p2.6           ; Green LED bit
+led_red bit p2.7             ; Red LED bit
+buzzer bit p2.4
+index equ 0x30
 
+; Start of the program
+org 00h
+main:
+    ; Configure some parameters
+    mov dptr, #ma7seg-1       ; Initialize DPTR with the address of ma7seg -1
+    clr a                     ; Clear accumulator
+
+    ; Configure pins
+	clr buzzer
+	clr led_red
+    clr led_green             ; Turn off green LED initially
+    setb button1              ; Set button 1 as input (high state by default)
+    setb button2              ; Set button 2 as input (high state by default)
+    
+    ; Display initial value (8.) on 7-segment
+    mov data_7seg, #0xFE
+	mov index, #0
+    sjmp loop                 ; Jump to loop
+
+loop:
+    ; Check buttons
+    jnb button1, increment_display ; If button 1 is pressed, jump to increment_display
+    jnb button2, save_number       ; If button 2 is pressed, jump to save_number
+    sjmp loop                      ; Otherwise, keep looping
+
+increment_display:
+	clr led2                  ; Disable 7-segment display #2 
+    ; Display incremented number
+    clr a                         ; Clear accumulator
+    inc dptr                      ; Increment DPTR to point to the next value
+    movc a, @a+dptr               ; Load the next pattern from ma7seg
+    mov data_7seg, a              ; Display number on 7-segment
+
+    call delay                    ; Debounce delay
+
+    ; If the value is not 0x90 (9), go back to loop
+    cjne a, #0x90, loop
+    ; Else reset DPTR to the start of ma7seg after reaching 9
+    mov dptr, #ma7seg-1
+    sjmp loop
+
+save_number:
+    ; Shift numbers in R3, R2, R1 to make room for new value in R0
+    mov a, R2
+    mov R3, a                     ; Move previous R2 to R3
+    mov a, R1
+    mov R2, a                     ; Move previous R1 to R2
+    mov a, R0
+    mov R1, a                     ; Move previous R0 to R1
+    mov R0, data_7seg             ; Store the new number in R0
+
+    ; Display number 0 on 7-segment
+    clr a
+    mov dptr, #ma7seg             ; Reset DPTR to start of ma7seg
+    movc a, @a+dptr
+    mov data_7seg, a              ; Display the next value on 7-segment
+    call delay                    ; Debounce delay
+
+	; Check if index is 4 or not
+	inc index                  ; Move to next index
+	mov a, index
+    cjne a, #4, loop           ; If not, go back to loop
+	; Else Comparison of entered numbers with password (1, 1, 1, 1)
+    mov a, r3
+    cjne a, #0xf9, incorrect
+    mov a, r2
+    cjne a, #0xf9, incorrect
+    mov a, r1
+    cjne a, #0xf9, incorrect
+    mov a, r0
+    cjne a, #0xf9, incorrect
+
+	correct:
+		clr led_red                ; Turn off red LED
+		setb led_green             ; Turn on green LED
+		; Buzzer 3 times
+		setb buzzer
+			call delay
+			call delay
+		clr buzzer
+			call delay
+			call delay
+		setb buzzer
+			call delay
+			call delay
+		sjmp reset                 ; Reset after correct entry
+		
+	incorrect:
+		clr led_green              ; Turn off green LED
+		setb led_red               ; Turn on red LED
+		; Buzzer 2 times
+		setb buzzer
+			call delay
+			call delay
+		sjmp reset                 ; Reset after incorrect entry
+	reset:
+		mov index, #0              ; Reset index for next entry
+		sjmp main                  ; Restart the program
+
+; Delay subroutine
+delay:
+    mov r7, #4                    ; Outer loop count (4 * 50ms = 200 ms)
+d1: mov r6, #250
+d2: mov r5, #250
+d3: djnz r5, d3
+    djnz r6, d2
+    djnz r7, d1
+    ret                           ; Return from subroutine
+
+; 7-segment display data for digits 0-9
+ma7seg:
+    db 0xc0, 0xf9, 0xa4, 0xb0, 0x99, 0x92, 0x82, 0xf8, 0x80, 0x90
+password:
+	db
+end
