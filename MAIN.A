@@ -11,8 +11,7 @@ main:
     mov dptr, #ma7seg        ; Initialize DPTR with the address of ma7seg
     clr led2                 ; Disable 7-segment display #2 (if dual-display setup)
     clr a                    ; Clear accumulator
-    movc a, @a+dptr          ; Load initial value (0) from ma7seg into A
-    mov data_7seg, a         ; Display initial value (0) on 7-segment
+    mov data_7seg, #0        ; Display initial value (8.) on 7-segment
     setb button1             ; Set button 1 as input (high state by default)
     setb button2             ; Set button 2 as input (high state by default)
     sjmp loop                ; Jump to loop
@@ -24,10 +23,10 @@ loop:
 
 increment_led1:
     call delay                 ; Call delay subroutine for debouncing
-    inc dptr                   ; Increment DPTR to point to the next value
     clr a                      ; Clear accumulator
     movc a, @a+dptr            ; Load the next pattern from ma7seg
-    mov data_7seg, a           ; Display the next value on 7-segment
+    mov data_7seg, a 
+    inc dptr                   ; Increment DPTR to point to the next value
     cjne a, #0x90, loop        ; If the value is not 0x90 (9), go back to loop
     mov dptr, #ma7seg          ; Reset DPTR to the start of ma7seg after reaching 9
     sjmp loop                  ; Go back to loop
