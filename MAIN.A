@@ -1,0 +1,35 @@
+;
+; Hien mot so
+; start
+;
+
+data_7seg equ p0
+led1 bit p2.2
+led2 bit p2.3
+button bit p3.2  ; Define button input
+org 00h
+main: 
+    mov dptr,#ma7seg    ; Initialize DPTR with the address of ma7seg
+    clr led2            ; Disable 7seg no2
+    clr a
+    movc a,@a+dptr
+    mov data_7seg,a     ; Display initial value (0)
+    setb button         ; Set button as input
+    sjmp loop           ; Jump to loop
+
+loop:
+    jnb button,increment ; If button is pressed, jump to increment
+    sjmp loop           ; Otherwise, keep looping
+
+increment:
+    inc dptr            ; Increment DPTR to point to the next value
+    clr a
+    movc a,@a+dptr
+    mov data_7seg,a     ; Display the next value
+    cjne a,#0x90,loop   ; If the value is not 0x90 (9), go back to loop
+    mov dptr,#ma7seg    ; Reset DPTR to the start of ma7seg
+    sjmp loop           ; Go back to loop
+
+ma7seg:
+    db 0xc0,0xf9,0xa4,0xb0,0x99,0x92,0x82,0xf8,0x80,0x90 
+end 
