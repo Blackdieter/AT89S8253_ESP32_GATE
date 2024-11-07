@@ -1,0 +1,94 @@
+; Define constants and data segments
+data_7seg  equ p0             ; 7-segment display connected to Port 0
+led_green  bit p2.2           ; Green LED for correct password
+led_red    bit p2.3           ; Red LED for incorrect password
+button1    bit p3.2           ; Button 1 input for incrementing number
+button2    bit p3.3           ; Button 2 input for submitting number
+
+password:  db 1, 2, 3, 4      ; Predefined 4-digit password
+entered:   db 0, 0, 0, 0      ; Array to store user-entered values
+
+count  equ 0x30               ; Memory address for count of button2 presses
+index  equ 0x31               ; Memory address for current position in entered array
+
+org 00h
+main:
+    mov dptr, #ma7seg         ; Initialize DPTR with address of ma7seg table
+    clr led_green             ; Turn off green LED
+    clr led_red               ; Turn off red LED
+    clr a                     ; Clear accumulator
+    mov data_7seg, #0xc0      ; Display initial value (0) on 7-segment
+    mov count, #0             ; Reset count
+    mov index, #0             ; Reset index in entered array
+
+loop:
+    jnb button1, increment_value  ; If button 1 is pressed, increment value
+    jnb button2, submit_value     ; If button 2 is pressed, submit current value
+    sjmp loop                     ; Keep looping
+
+increment_value:
+    call delay                     ; Debounce
+    inc a                          ; Increment current value in A
+    cjne a, #0x0a, update_display  ; If value < 10, update display
+    mov a, #0                      ; Reset to 0 if it reaches 10
+update_display:
+    movc dptr, #ma7seg             ; Update 7-segment display with new value
+    movc a, @a+dptr
+    mov data_7seg, a
+    sjmp loop
+
+submit_value:
+    call delay                     ; Debounce
+    mov entered[index], a          ; Store current value in entered array
+    inc index                      ; Move to the next position in entered
+    mov a, #0                      ; Reset display to 0
+    mov data_7seg, #0xc0           ; Display 0 on 7-segment
+
+    inc count                      ; Increment submit count
+    cjne count, #4, loop           ; If count is not 4, keep entering values
+
+    ; If 4 values entered, compare with password
+    mov dptr, #password            ; Load password address
+    mov r0, #entered               ; Load entered array base address
+    mov r1, #4                     ; Set R1 to compare 4 digits
+compare_loop:
+    movx a, @r0                    ; Load value from entered
+    movx @dptr, a                  ; Compare with password value
+    jnz incorrect_password         ; If any mismatch, jump to incorrect
+    inc r0                         ; Move to next entered digit
+    inc dptr                       ; Move to next password digit
+    djnz r1, compare_loop          ; Repeat for all 4 digits
+
+correct_password:
+    setb led_green                 ; Turn on green LED
+    clr led_red                    ; Ensure red LED is off
+    sjmp reset_system              ; Reset system for next try
+
+incorrect_password:
+    setb led_red                   ; Turn on red LED
+    clr led_green                  ; Ensure green LED is off
+
+reset_system:
+    clr a
+    mov data_7seg, #0xc0           ; Reset display to 0
+    mov count, #0                  ; Reset count
+    mov index, #0                  ; Reset index
+    clr led_green                  ; Turn off green LED after reset
+    clr led_red                    ; Turn off red LED after reset
+    sjmp loop                      ; Return to main loop
+
+; Delay subroutine for debouncing
+delay:
+    mov r7, #4
+d1: mov r6, #250
+d2: mov r5, #250
+d3: djnz r5, d3
+    djnz r6, d2
+    djnz r7, d1
+    ret
+
+; 7-segment display data for digits 0-9
+ma7seg:
+    db 0xc0, 0xf9, 0xa4, 0xb0, 0x99, 0x92, 0x82, 0xf8, 0x80, 0x90
+
+end

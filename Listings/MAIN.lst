@@ -1,4 +1,4 @@
-A51 MACRO ASSEMBLER  MAIN                                                                 11/07/2024 10:35:10 PAGE     1
+A51 MACRO ASSEMBLER  MAIN                                                                 11/07/2024 14:04:12 PAGE     1
 
 
 MACRO ASSEMBLER A51 V8.2.7.0
@@ -8,67 +8,107 @@ ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE MAIN.A SET(SMALL) DEBUG PRINT(.
 
 LOC  OBJ            LINE     SOURCE
 
-                       1     ; Define constants and data segments
-  0080                 2     data_7seg equ p0             ; 7-segment display connected to Port 0
-  00A2                 3     led1 bit p2.2                ; LED1 control bit
-  00A3                 4     led2 bit p2.3                ; LED2 control bit for disabling 2nd 7-seg
-  00B2                 5     button1 bit p3.2             ; Button 1 input on Port 3.2
-  00B3                 6     button2 bit p3.3             ; Button 2 input on Port 3.3
-                       7     
-                       8     ; Start of the program
-0000                   9     org 00h
-0000                  10     main: 
-0000 90003E           11         mov dptr, #ma7seg        ; Initialize DPTR with the address of ma7seg
-0003 C2A3             12         clr led2                 ; Disable 7-segment display #2 (if dual-display setup)
-0005 E4               13         clr a                    ; Clear accumulator
-0006 758000           14         mov data_7seg, #0        ; Display initial value (8.) on 7-segment
-0009 D2B2             15         setb button1             ; Set button 1 as input (high state by default)
-000B D2B3             16         setb button2             ; Set button 2 as input (high state by default)
-000D 8000             17         sjmp loop                ; Jump to loop
+                       1     ;
+                       2     ; Hien mot so
+                       3     ; start
+                       4     ;
+                       5     
+  0080                 6     data_7seg equ p0             ; 7-segment display connected to Port 0
+  00A2                 7     led1 bit p2.2                ; LED1 control bit
+  00A3                 8     led2 bit p2.3                ; LED2 control bit for disabling 2nd 7-seg
+  00B2                 9     button1 bit p3.2             ; Button 1 input on Port 3.2
+  00B3                10     button2 bit p3.3             ; Button 2 input on Port 3.3
+  00A6                11     led_green bit p2.6           ; Green led bit
+  00A7                12     led_red bit p2.7             ; Red led bit
+                      13     
+0000 01020304         14     password:  db 1, 2, 3, 4      ; Predefined 4-digit password
+0004 00000000         15     entered:   db 0, 0, 0, 0      ; Array to store user-entered values
+                      16     
+  0030                17     index  equ 0x30              ; Memory address for current position in entered array
                       18     
-000F                  19     loop:
-000F 30B205           20         jnb button1, increment_led1 ; If button 1 is pressed, jump to increment_led1
-0012 30B311           21         jnb button2, increment_led2 ; If button 2 is pressed, jump to increment_led2
-0015 80F8             22         sjmp loop                   ; Otherwise, keep looping
-                      23     
-0017                  24     increment_led1:
-0017 1131             25         call delay                 ; Call delay subroutine for debouncing
-0019 E4               26         clr a                      ; Clear accumulator
-001A 93               27         movc a, @a+dptr            ; Load the next pattern from ma7seg
-001B F580             28         mov data_7seg, a 
-001D A3               29         inc dptr                   ; Increment DPTR to point to the next value
-001E B490EE           30         cjne a, #0x90, loop        ; If the value is not 0x90 (9), go back to loop
-0021 90003E           31         mov dptr, #ma7seg          ; Reset DPTR to the start of ma7seg after reaching 9
-0024 80E9             32         sjmp loop                  ; Go back to loop
-                      33     
-0026                  34     increment_led2:
-0026 1131             35         call delay                 ; Call delay subroutine for debouncing
-0028 E4               36         clr a                      ; Clear accumulator
-0029 90003E           37             mov dptr, #ma7seg          ; Reset DPTR to the start of ma7seg after reaching 9
-002C 93               38             movc a, @a+dptr            ; Load the next pattern from ma7seg
-002D F580             39         mov data_7seg, a           ; Display the next value on 7-segment
-002F 80DE             40         sjmp loop                  ; Return to the main loop
-                      41     
-                      42     ; Delay subroutine
-0031                  43     delay:
-0031 7F04             44         mov r7, #4                ; Outer loop count (20 * 50ms = 1 second)
-0033 7EFA             45     d1: mov r6, #250              ; Inner loop count
-0035 7DFA             46     d2: mov r5, #250              ; Innermost loop count
-0037 DDFE             47     d3: djnz r5, d3               ; Decrement R5 until it reaches 0
-0039 DEFA             48         djnz r6, d2               ; Decrement R6 until it reaches 0
-003B DFF6             49         djnz r7, d1               ; Decrement R7 until it reaches 0
-003D 22               50         ret                       ; Return from subroutine
+                      19     ; Start of the program
+0000                  20     org 00h
+0000                  21     main:
+                      22         ; Configure some parameter
+0000 900053           23         mov dptr, #ma7seg-1       ; Initialize DPTR with the address of ma7seg -1
+0003 E4               24         clr a                     ; Clear accumulator
+0004 753000           25         mov index, #0             ; Reset index in entered array
+                      26     
+                      27         ; Configure some pin
+0007 C2A6             28         clr led_green
+0009 C2A7             29         clr led_red
+000B C2A3             30         clr led2                 ; Disable 7-segment display #2 (if dual-display setup)
+000D D2B2             31         setb button1             ; Set button 1 as input (high state by default)
+000F D2B3             32         setb button2             ; Set button 2 as input (high state by default)
+                      33        
+                      34         ; Display initial value (8.) on 7-segment
+0011 758000           35         mov data_7seg, #0        
+0014 8000             36         sjmp loop                ; Jump to loop
+                      37     
+0016                  38     loop:
+0016 30B205           39         jnb button1, increment_led1 ; If button 1 is pressed, jump to increment_led1
+0019 30B311           40         jnb button2, increment_led2 ; If button 2 is pressed, jump to increment_led2
+001C 80F8             41         sjmp loop                   ; Otherwise, keep looping
+                      42     
+001E                  43     increment_led1:
+                      44         ; Display increment number
+001E E4               45         clr a                      ; Clear accumulator
+001F A3               46         inc dptr                   ; Increment DPTR to point to the next value
+0020 93               47         movc a, @a+dptr            ; Load the next pattern from ma7seg
+0021 F580             48         mov data_7seg, a 
+                      49     
+0023 1147             50         call delay                 ; Call delay subroutine for debouncing
                       51     
-                      52     ; 7-segment display data for digits 0-9
-003E                  53     ma7seg:
-003E C0F9A4B0         54         db 0xc0, 0xf9, 0xa4, 0xb0, 0x99, 0x92, 0x82, 0xf8, 0x80, 0x90
-0042 999282F8                
-0046 8090                    
-                      55     
-A51 MACRO ASSEMBLER  MAIN                                                                 11/07/2024 10:35:10 PAGE     2
+                      52         ; If the value is not 0x90 (9), go back to loop
+0025 B490EE           53         cjne a, #0x90, loop
+                      54         ; Else Reset DPTR to the start of ma7seg after reaching 9
+0028 900053           55         mov dptr, #ma7seg-1 
+002B 80E9             56         sjmp loop                  ; Go back to loop
+                      57     
+A51 MACRO ASSEMBLER  MAIN                                                                 11/07/2024 14:04:12 PAGE     2
 
-                      56     end
-A51 MACRO ASSEMBLER  MAIN                                                                 11/07/2024 10:35:10 PAGE     3
+002D                  58     increment_led2:
+                      59         ; Store the led1 number to entered
+002D A830             60         mov r0, index              ; Move index to R0
+002F F6               61         mov @r0, a                 ; Store current value in entered array
+0030 0530             62         inc index                  ; Move to the next position in entered
+                      63     
+                      64         ; Display number 0 to led
+0032 E4               65         clr a                      ; Clear accumulator
+0033 900054           66         mov dptr, #ma7seg          ; Reset DPTR to the start of ma7seg after reaching 9
+0036 93               67         movc a, @a+dptr            ; Load the next pattern from ma7seg
+0037 F580             68         mov data_7seg, a           ; Display the next value on 7-segment
+                      69     
+                      70         ; Call delay subroutine for debouncing
+0039 1147             71         call delay                 
+                      72     
+                      73         ; Move index to a register for comparison
+003B E530             74         mov a, index
+                      75         ; If index is not 4, keep entering values
+003D B404D6           76         cjne a, #4, loop           
+                      77         ; Else Turn on green LED
+0040 D2A6             78         setb led_green
+0042 753000           79         mov index, #0             ; Reset index in entered array    
+0045 80CF             80         sjmp loop                  ; Return to the main loop
+                      81     
+                      82     ; Delay subroutine
+0047                  83     delay:
+0047 7F04             84         mov r7, #4                ; Outer loop count (20 * 50ms = 1 second)
+0049 7EFA             85     d1: mov r6, #250              ; Inner loop count
+004B 7DFA             86     d2: mov r5, #250              ; Innermost loop count
+004D DDFE             87     d3: djnz r5, d3               ; Decrement R5 until it reaches 0
+004F DEFA             88         djnz r6, d2               ; Decrement R6 until it reaches 0
+0051 DFF6             89         djnz r7, d1               ; Decrement R7 until it reaches 0
+0053 22               90         ret                       ; Return from subroutine
+                      91     
+                      92     ; 7-segment display data for digits 0-9
+0054                  93     ma7seg:
+0054 C0F9A4B0         94         db 0xc0, 0xf9, 0xa4, 0xb0, 0x99, 0x92, 0x82, 0xf8, 0x80, 0x90
+0058 999282F8                
+005C 8090                    
+                      95     
+                      96     end
+A51 MACRO ASSEMBLER  MAIN                                                                 11/07/2024 14:04:12 PAGE     3
 
 SYMBOL TABLE LISTING
 ------ ----- -------
@@ -78,21 +118,26 @@ N A M E             T Y P E  V A L U E   ATTRIBUTES
 
 BUTTON1. . . . . .  B ADDR   00B0H.2 A   
 BUTTON2. . . . . .  B ADDR   00B0H.3 A   
-D1 . . . . . . . .  C ADDR   0033H   A   
-D2 . . . . . . . .  C ADDR   0035H   A   
-D3 . . . . . . . .  C ADDR   0037H   A   
+D1 . . . . . . . .  C ADDR   0049H   A   
+D2 . . . . . . . .  C ADDR   004BH   A   
+D3 . . . . . . . .  C ADDR   004DH   A   
 DATA_7SEG. . . . .  D ADDR   0080H   A   
-DELAY. . . . . . .  C ADDR   0031H   A   
-INCREMENT_LED1 . .  C ADDR   0017H   A   
-INCREMENT_LED2 . .  C ADDR   0026H   A   
+DELAY. . . . . . .  C ADDR   0047H   A   
+ENTERED. . . . . .  C ADDR   0004H   A   
+INCREMENT_LED1 . .  C ADDR   001EH   A   
+INCREMENT_LED2 . .  C ADDR   002DH   A   
+INDEX. . . . . . .  N NUMB   0030H   A   
 LED1 . . . . . . .  B ADDR   00A0H.2 A   
 LED2 . . . . . . .  B ADDR   00A0H.3 A   
-LOOP . . . . . . .  C ADDR   000FH   A   
-MA7SEG . . . . . .  C ADDR   003EH   A   
+LED_GREEN. . . . .  B ADDR   00A0H.6 A   
+LED_RED. . . . . .  B ADDR   00A0H.7 A   
+LOOP . . . . . . .  C ADDR   0016H   A   
+MA7SEG . . . . . .  C ADDR   0054H   A   
 MAIN . . . . . . .  C ADDR   0000H   A   
 P0 . . . . . . . .  D ADDR   0080H   A   
 P2 . . . . . . . .  D ADDR   00A0H   A   
 P3 . . . . . . . .  D ADDR   00B0H   A   
+PASSWORD . . . . .  C ADDR   0000H   A   
 
 
 REGISTER BANK(S) USED: 0 
