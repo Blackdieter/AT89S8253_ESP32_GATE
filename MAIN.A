@@ -22,6 +22,7 @@ loop:
     sjmp loop           ; Otherwise, keep looping
 
 increment:
+    call delay          ; Call delay subroutine
     inc dptr            ; Increment DPTR to point to the next value
     clr a
     movc a,@a+dptr
@@ -29,6 +30,15 @@ increment:
     cjne a,#0x90,loop   ; If the value is not 0x90 (9), go back to loop
     mov dptr,#ma7seg    ; Reset DPTR to the start of ma7seg
     sjmp loop           ; Go back to loop
+
+delay:
+    mov r7, #5         ; Outer loop count (20 * 50ms = 1 second) Fix this number to decrease
+d1: mov r6, #250        ; Inner loop count
+d2: mov r5, #250        ; Innermost loop count
+d3: djnz r5, d3         ; Decrement R5 until it reaches 0
+    djnz r6, d2         ; Decrement R6 until it reaches 0
+    djnz r7, d1         ; Decrement R7 until it reaches 0
+    ret                 ; Return from subroutine
 
 ma7seg:
     db 0xc0,0xf9,0xa4,0xb0,0x99,0x92,0x82,0xf8,0x80,0x90 

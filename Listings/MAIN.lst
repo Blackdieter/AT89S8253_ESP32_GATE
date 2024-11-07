@@ -1,4 +1,4 @@
-A51 MACRO ASSEMBLER  MAIN                                                                 11/07/2024 01:35:14 PAGE     1
+A51 MACRO ASSEMBLER  MAIN                                                                 11/07/2024 10:06:02 PAGE     1
 
 
 MACRO ASSEMBLER A51 V8.2.7.0
@@ -19,7 +19,7 @@ LOC  OBJ            LINE     SOURCE
   00B2                 9     button bit p3.2  ; Define button input
 0000                  10     org 00h
 0000                  11     main: 
-0000 90001F           12         mov dptr,#ma7seg    ; Initialize DPTR with the address of ma7seg
+0000 90002E           12         mov dptr,#ma7seg    ; Initialize DPTR with the address of ma7seg
 0003 C2A3             13         clr led2            ; Disable 7seg no2
 0005 E4               14         clr a
 0006 93               15         movc a,@a+dptr
@@ -32,20 +32,30 @@ LOC  OBJ            LINE     SOURCE
 0010 80FB             22         sjmp loop           ; Otherwise, keep looping
                       23     
 0012                  24     increment:
-0012 A3               25         inc dptr            ; Increment DPTR to point to the next value
-0013 E4               26         clr a
-0014 93               27         movc a,@a+dptr
-0015 F580             28         mov data_7seg,a     ; Display the next value
-0017 B490F3           29         cjne a,#0x90,loop   ; If the value is not 0x90 (9), go back to loop
-001A 90001F           30         mov dptr,#ma7seg    ; Reset DPTR to the start of ma7seg
-001D 80EE             31         sjmp loop           ; Go back to loop
-                      32     
-001F                  33     ma7seg:
-001F C0F9A4B0         34         db 0xc0,0xf9,0xa4,0xb0,0x99,0x92,0x82,0xf8,0x80,0x90 
-0023 999282F8                
-0027 8090                    
-                      35     end 
-A51 MACRO ASSEMBLER  MAIN                                                                 11/07/2024 01:35:14 PAGE     2
+0012 1121             25         call delay          ; Call delay subroutine
+0014 A3               26         inc dptr            ; Increment DPTR to point to the next value
+0015 E4               27         clr a
+0016 93               28         movc a,@a+dptr
+0017 F580             29         mov data_7seg,a     ; Display the next value
+0019 B490F1           30         cjne a,#0x90,loop   ; If the value is not 0x90 (9), go back to loop
+001C 90002E           31         mov dptr,#ma7seg    ; Reset DPTR to the start of ma7seg
+001F 80EC             32         sjmp loop           ; Go back to loop
+                      33     
+0021                  34     delay:
+0021 7F05             35         mov r7, #5         ; Outer loop count (20 * 50ms = 1 second) Fix this number to decrease
+0023 7EFA             36     d1: mov r6, #250        ; Inner loop count
+0025 7DFA             37     d2: mov r5, #250        ; Innermost loop count
+0027 DDFE             38     d3: djnz r5, d3         ; Decrement R5 until it reaches 0
+0029 DEFA             39         djnz r6, d2         ; Decrement R6 until it reaches 0
+002B DFF6             40         djnz r7, d1         ; Decrement R7 until it reaches 0
+002D 22               41         ret                 ; Return from subroutine
+                      42     
+002E                  43     ma7seg:
+002E C0F9A4B0         44         db 0xc0,0xf9,0xa4,0xb0,0x99,0x92,0x82,0xf8,0x80,0x90 
+0032 999282F8                
+0036 8090                    
+                      45     end 
+A51 MACRO ASSEMBLER  MAIN                                                                 11/07/2024 10:06:02 PAGE     2
 
 SYMBOL TABLE LISTING
 ------ ----- -------
@@ -54,12 +64,16 @@ SYMBOL TABLE LISTING
 N A M E             T Y P E  V A L U E   ATTRIBUTES
 
 BUTTON . . . . . .  B ADDR   00B0H.2 A   
+D1 . . . . . . . .  C ADDR   0023H   A   
+D2 . . . . . . . .  C ADDR   0025H   A   
+D3 . . . . . . . .  C ADDR   0027H   A   
 DATA_7SEG. . . . .  D ADDR   0080H   A   
+DELAY. . . . . . .  C ADDR   0021H   A   
 INCREMENT. . . . .  C ADDR   0012H   A   
 LED1 . . . . . . .  B ADDR   00A0H.2 A   
 LED2 . . . . . . .  B ADDR   00A0H.3 A   
 LOOP . . . . . . .  C ADDR   000DH   A   
-MA7SEG . . . . . .  C ADDR   001FH   A   
+MA7SEG . . . . . .  C ADDR   002EH   A   
 MAIN . . . . . . .  C ADDR   0000H   A   
 P0 . . . . . . . .  D ADDR   0080H   A   
 P2 . . . . . . . .  D ADDR   00A0H   A   
