@@ -1,45 +1,57 @@
-;
-; Hien mot so
-; start
-;
+; Define constants and data segments
+data_7seg equ p0             ; 7-segment display connected to Port 0
+led1 bit p2.2                ; LED1 control bit
+led2 bit p2.3                ; LED2 control bit for disabling 2nd 7-seg
+button1 bit p3.2             ; Button 1 input on Port 3.2
+button2 bit p3.3             ; Button 2 input on Port 3.3
 
-data_7seg equ p0
-led1 bit p2.2
-led2 bit p2.3
-button bit p3.2  ; Define button input
+; Start of the program
 org 00h
 main: 
-    mov dptr,#ma7seg    ; Initialize DPTR with the address of ma7seg
-    clr led2            ; Disable 7seg no2
-    clr a
-    movc a,@a+dptr
-    mov data_7seg,a     ; Display initial value (0)
-    setb button         ; Set button as input
-    sjmp loop           ; Jump to loop
+    mov dptr, #ma7seg        ; Initialize DPTR with the address of ma7seg
+    clr led2                 ; Disable 7-segment display #2 (if dual-display setup)
+    clr a                    ; Clear accumulator
+    movc a, @a+dptr          ; Load initial value (0) from ma7seg into A
+    mov data_7seg, a         ; Display initial value (0) on 7-segment
+    setb button1             ; Set button 1 as input (high state by default)
+    setb button2             ; Set button 2 as input (high state by default)
+    sjmp loop                ; Jump to loop
 
 loop:
-    jnb button,increment ; If button is pressed, jump to increment
-    sjmp loop           ; Otherwise, keep looping
+    jnb button1, increment_led1 ; If button 1 is pressed, jump to increment_led1
+    jnb button2, increment_led2 ; If button 2 is pressed, jump to increment_led2
+    sjmp loop                   ; Otherwise, keep looping
 
-increment:
-    call delay          ; Call delay subroutine
-    inc dptr            ; Increment DPTR to point to the next value
-    clr a
-    movc a,@a+dptr
-    mov data_7seg,a     ; Display the next value
-    cjne a,#0x90,loop   ; If the value is not 0x90 (9), go back to loop
-    mov dptr,#ma7seg    ; Reset DPTR to the start of ma7seg
-    sjmp loop           ; Go back to loop
+increment_led1:
+    call delay                 ; Call delay subroutine for debouncing
+    inc dptr                   ; Increment DPTR to point to the next value
+    clr a                      ; Clear accumulator
+    movc a, @a+dptr            ; Load the next pattern from ma7seg
+    mov data_7seg, a           ; Display the next value on 7-segment
+    cjne a, #0x90, loop        ; If the value is not 0x90 (9), go back to loop
+    mov dptr, #ma7seg          ; Reset DPTR to the start of ma7seg after reaching 9
+    sjmp loop                  ; Go back to loop
 
+increment_led2:
+    call delay                 ; Call delay subroutine for debouncing
+    clr a                      ; Clear accumulator
+	mov dptr, #ma7seg          ; Reset DPTR to the start of ma7seg after reaching 9
+	movc a, @a+dptr            ; Load the next pattern from ma7seg
+    mov data_7seg, a           ; Display the next value on 7-segment
+    sjmp loop                  ; Return to the main loop
+
+; Delay subroutine
 delay:
-    mov r7, #5         ; Outer loop count (20 * 50ms = 1 second) Fix this number to decrease
-d1: mov r6, #250        ; Inner loop count
-d2: mov r5, #250        ; Innermost loop count
-d3: djnz r5, d3         ; Decrement R5 until it reaches 0
-    djnz r6, d2         ; Decrement R6 until it reaches 0
-    djnz r7, d1         ; Decrement R7 until it reaches 0
-    ret                 ; Return from subroutine
+    mov r7, #4                ; Outer loop count (20 * 50ms = 1 second)
+d1: mov r6, #250              ; Inner loop count
+d2: mov r5, #250              ; Innermost loop count
+d3: djnz r5, d3               ; Decrement R5 until it reaches 0
+    djnz r6, d2               ; Decrement R6 until it reaches 0
+    djnz r7, d1               ; Decrement R7 until it reaches 0
+    ret                       ; Return from subroutine
 
+; 7-segment display data for digits 0-9
 ma7seg:
-    db 0xc0,0xf9,0xa4,0xb0,0x99,0x92,0x82,0xf8,0x80,0x90 
-end 
+    db 0xc0, 0xf9, 0xa4, 0xb0, 0x99, 0x92, 0x82, 0xf8, 0x80, 0x90
+
+end
