@@ -1,0 +1,288 @@
+A51 MACRO ASSEMBLER  MAIN                                                                 11/08/2024 09:32:19 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\main.obj
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE main.a51 SET(SMALL) DEBUG PRINT(.\Listings\main.lst) OBJECT(.\Objects\m
+                      ain.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+  0080                 1     DATA_7SEG    EQU P0                 ; 7-SEGMENT DISPLAY CONNECTED TO PORT 0
+  00A2                 2     LED1         BIT P2.2               ; LED1 CONTROL BIT
+  00A3                 3     LED2         BIT P2.3               ; LED2 CONTROL BIT FOR ENABLING THE 2ND 7-SEGMENT
+  00B2                 4     BUTTON1      BIT P3.2               ; BUTTON 1 INPUT ON PORT 3.2
+  00B3                 5     BUTTON2      BIT P3.3               ; BUTTON 2 INPUT ON PORT 3.3
+  00A6                 6     LED_GREEN    BIT P2.6               ; GREEN LED BIT
+  00A7                 7     LED_RED      BIT P2.7               ; RED LED BIT
+  00A4                 8     BUZZER       BIT P2.4
+  0030                 9     INDEX        EQU 0x30
+                      10     
+0000                  11     UART_BUFFER: DS 4                   ; RESERVE 4 BYTES FOR ASCII CHARACTERS
+                      12     
+0000                  13     ORG 00H
+0000                  14     MAIN:
+                      15         ; INITIALIZE UART FOR 9600 BAUD RATE
+0000 758920           16         MOV TMOD, #20H                ; TIMER 1 IN MODE 2 (8-BIT AUTO-RELOAD)
+0003 758DFD           17         MOV TH1, #0FDH                ; SET BAUD RATE TO 9600 (11.0592 MHZ CLOCK)
+0006 759850           18         MOV SCON, #50H                ; UART MODE 1, 8-BIT UART, REN ENABLED
+0009 D28E             19         SETB TR1                      ; START TIMER 1
+                      20     
+                      21         ; CONFIGURE PARAMETERS
+000B 9000FF           22         MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
+000E E4               23         CLR A                         ; CLEAR ACCUMULATOR
+                      24     
+                      25         ; CONFIGURE PINS
+000F C2A4             26         CLR BUZZER
+0011 C2A7             27         CLR LED_RED
+0013 C2A6             28         CLR LED_GREEN                 ; TURN OFF GREEN LED INITIALLY
+0015 D2A3             29         SETB LED2
+0017 D2B2             30         SETB BUTTON1                  ; SET BUTTON1 AS INPUT
+0019 D2B3             31         SETB BUTTON2                  ; SET BUTTON2 AS INPUT
+                      32         
+                      33         ; DISPLAY INITIAL VALUE (8) ON 7-SEGMENT
+001B 758089           34         MOV DATA_7SEG, #0x89
+001E 753000           35         MOV INDEX, #0
+0021 8000             36         SJMP LOOP                     ; JUMP TO MAIN LOOP
+                      37     
+0023                  38     LOOP:
+                      39         ; CHECK BUTTON STATES
+0023 30B205           40         JNB BUTTON1, INCREMENT_DISPLAY  ; IF BUTTON1 PRESSED, GO TO INCREMENT_DISPLAY
+0026 30B313           41         JNB BUTTON2, SAVE_NUMBER        ; IF BUTTON2 PRESSED, GO TO SAVE_NUMBER
+0029 80F8             42         SJMP LOOP                       ; OTHERWISE, KEEP LOOPING
+                      43     
+002B                  44     INCREMENT_DISPLAY:
+002B C2A3             45         CLR LED2                       ; DISABLE 7-SEGMENT DISPLAY #2
+002D E4               46         CLR A                          ; CLEAR ACCUMULATOR
+002E A3               47         INC DPTR                       ; INCREMENT DPTR FOR NEXT VALUE
+002F 93               48         MOVC A, @A+DPTR                ; LOAD NEXT PATTERN FROM MA7SEG
+0030 F580             49         MOV DATA_7SEG, A               ; DISPLAY NUMBER ON 7-SEGMENT
+0032 11F3             50         CALL DELAY                     ; DEBOUNCE DELAY
+                      51     
+                      52         ; CHECK IF VALUE IS NOT 0x90 (9)
+0034 B490EC           53         CJNE A, #0x90, LOOP
+                      54         ; RESET DPTR TO START OF MA7SEG AFTER REACHING 9
+0037 9000FF           55         MOV DPTR, #MA7SEG-1
+003A 80E7             56         SJMP LOOP
+                      57     
+A51 MACRO ASSEMBLER  MAIN                                                                 11/08/2024 09:32:19 PAGE     2
+
+003C                  58     SAVE_NUMBER:
+                      59         ; SHIFT NUMBERS IN REGISTERS TO MAKE ROOM FOR NEW VALUE IN R0
+003C EA               60         MOV A, R2
+003D FB               61         MOV R3, A                     ; MOVE PREVIOUS R2 TO R3
+003E E9               62         MOV A, R1
+003F FA               63         MOV R2, A                     ; MOVE PREVIOUS R1 TO R2
+0040 E8               64         MOV A, R0
+0041 F9               65         MOV R1, A                     ; MOVE PREVIOUS R0 TO R1
+0042 A880             66         MOV R0, DATA_7SEG             ; STORE NEW NUMBER IN R0
+                      67     
+                      68         ; DISPLAY NUMBER 0 ON 7-SEGMENT
+0044 E4               69         CLR A
+0045 900100           70         MOV DPTR, #MA7SEG             ; RESET DPTR TO START OF MA7SEG
+0048 93               71         MOVC A, @A+DPTR
+0049 F580             72         MOV DATA_7SEG, A              ; DISPLAY NEXT VALUE ON 7-SEGMENT
+004B 11F3             73         CALL DELAY                    ; DEBOUNCE DELAY
+                      74     
+                      75         ; CHECK IF INDEX IS 4
+004D 0530             76         INC INDEX
+004F E530             77         MOV A, INDEX
+0051 B404CF           78         CJNE A, #4, LOOP              ; IF NOT, GO BACK TO LOOP
+                      79     
+                      80         ; COMPARISON OF ENTERED NUMBERS WITH PASSWORD (1, 1, 1, 1)
+0054 D2A3             81         SETB LED2                     ; ENABLE SECOND DISPLAY
+0056 758089           82         MOV DATA_7SEG, #0x89          ; DISPLAY 'H'
+                      83     
+                      84         ; CONVERT 7-SEGMENT CODES TO ASCII
+0059 119D             85         ACALL SEG_TO_ASCII
+                      86     
+                      87         ; TRANSMIT "****" AS STRING OVER UART
+005B 759920           88         MOV SBUF, #32                 ; SEND SPACE CHARACTER
+005E 11ED             89         ACALL WAIT_UART
+                      90     
+0060 EB               91         MOV A, R3                     ; SEND 1 OVER UART
+0061 F599             92         MOV SBUF, A
+0063 11ED             93         ACALL WAIT_UART
+                      94     
+0065 EA               95         MOV A, R2                     ; SEND 2 OVER UART
+0066 F599             96         MOV SBUF, A
+0068 11ED             97         ACALL WAIT_UART
+                      98     
+006A E9               99         MOV A, R1                     ; SEND 3 OVER UART
+006B F599            100         MOV SBUF, A
+006D 11ED            101         ACALL WAIT_UART
+                     102             
+006F E8              103         MOV A, R0                     ; SEND 4 OVER UART
+0070 F599            104         MOV SBUF, A
+0072 11ED            105         ACALL WAIT_UART
+                     106     
+                     107         ; CHECK EACH REGISTER AGAINST PASSWORD "1000"
+0074 EB              108         MOV A, R3
+0075 B43116          109         CJNE A, #'1', INCORRECT
+0078 EA              110         MOV A, R2
+0079 B43012          111         CJNE A, #'0', INCORRECT
+007C E9              112         MOV A, R1
+007D B4300E          113         CJNE A, #'0', INCORRECT
+0080 E8              114         MOV A, R0
+0081 B4300A          115         CJNE A, #'0', INCORRECT
+                     116     
+0084                 117             CORRECT:
+0084 C2A7            118                     CLR LED_RED                  ; TURN OFF RED LED
+0086 D2A6            119                     SETB LED_GREEN               ; TURN ON GREEN LED
+0088 11F3            120                     CALL DELAY
+008A 11F3            121                     CALL DELAY
+008C 800A            122                     SJMP RESET
+008E                 123             INCORRECT:
+A51 MACRO ASSEMBLER  MAIN                                                                 11/08/2024 09:32:19 PAGE     3
+
+008E C2A6            124                     CLR LED_GREEN                ; TURN OFF GREEN LED
+0090 D2A7            125                     SETB LED_RED                 ; TURN ON RED LED
+0092 11F3            126                     CALL DELAY
+0094 11F3            127                     CALL DELAY
+0096 8000            128                     SJMP RESET
+0098                 129             RESET:
+0098 753000          130                     MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
+009B 8086            131                     SJMP LOOP                    ; RESTART PROGRAM
+                     132     
+009D                 133     SEG_TO_ASCII:
+009D E8              134         MOV A, R0
+009E 11AE            135         ACALL CONVERT_DIGIT
+00A0 F8              136         MOV R0, A
+                     137     
+00A1 E9              138         MOV A, R1
+00A2 11AE            139         ACALL CONVERT_DIGIT
+00A4 F9              140         MOV R1, A
+                     141     
+00A5 EA              142         MOV A, R2
+00A6 11AE            143         ACALL CONVERT_DIGIT
+00A8 FA              144         MOV R2, A
+                     145     
+00A9 EB              146         MOV A, R3
+00AA 11AE            147         ACALL CONVERT_DIGIT
+00AC FB              148         MOV R3, A
+00AD 22              149         RET
+                     150     
+00AE                 151             CONVERT_DIGIT:
+00AE B4C003          152                             CJNE A, #0C0H, CHECK_1
+00B1 7430            153                             MOV A, #'0'
+00B3 22              154                             RET
+00B4                 155                     CHECK_1:
+00B4 B4F903          156                             CJNE A, #0F9H, CHECK_2
+00B7 7431            157                             MOV A, #'1'
+00B9 22              158                             RET
+00BA                 159                     CHECK_2:
+00BA B4A403          160                             CJNE A, #0A4H, CHECK_3
+00BD 7432            161                             MOV A, #'2'
+00BF 22              162                             RET
+00C0                 163                     CHECK_3:
+00C0 B4B003          164                             CJNE A, #0B0H, CHECK_4
+00C3 7433            165                             MOV A, #'3'
+00C5 22              166                             RET
+00C6                 167                     CHECK_4:
+00C6 B49903          168                             CJNE A, #099H, CHECK_5
+00C9 7434            169                             MOV A, #'4'
+00CB 22              170                             RET
+00CC                 171                     CHECK_5:
+00CC B49203          172                             CJNE A, #092H, CHECK_6
+00CF 7435            173                             MOV A, #'5'
+00D1 22              174                             RET
+00D2                 175                     CHECK_6:
+00D2 B48203          176                             CJNE A, #082H, CHECK_7
+00D5 7436            177                             MOV A, #'6'
+00D7 22              178                             RET
+00D8                 179                     CHECK_7:
+00D8 B4F803          180                             CJNE A, #0F8H, CHECK_8
+00DB 7437            181                             MOV A, #'7'
+00DD 22              182                             RET
+00DE                 183                     CHECK_8:
+00DE B48003          184                             CJNE A, #080H, CHECK_9
+00E1 7438            185                             MOV A, #'8'
+00E3 22              186                             RET
+00E4                 187                     CHECK_9:
+00E4 B49003          188                             CJNE A, #090H, ERROR
+00E7 7439            189                             MOV A, #'9'
+A51 MACRO ASSEMBLER  MAIN                                                                 11/08/2024 09:32:19 PAGE     4
+
+00E9 22              190                             RET
+00EA                 191                     ERROR:
+00EA 743F            192                             MOV A, #'?'
+00EC 22              193                             RET
+                     194     
+00ED                 195     WAIT_UART:
+00ED 3099FD          196         JNB TI, WAIT_UART
+00F0 C299            197         CLR TI
+00F2 22              198         RET
+                     199     
+00F3                 200     DELAY:
+00F3 7F04            201         MOV R7, #4
+00F5 7EFA            202     D1: MOV R6, #250
+00F7 7DFA            203     D2: MOV R5, #250
+00F9 DDFE            204     D3: DJNZ R5, D3
+00FB DEFA            205         DJNZ R6, D2
+00FD DFF6            206         DJNZ R7, D1
+00FF 22              207         RET
+                     208     
+                     209     ; 7-SEGMENT DISPLAY DATA FOR DIGITS 0-9
+0100                 210     MA7SEG:
+0100 C0F9A4B0        211         DB 0C0H, 0F9H, 0A4H, 0B0H, 099H, 092H, 082H, 0F8H, 080H, 090H
+0104 999282F8                
+0108 8090                    
+                     212     END
+A51 MACRO ASSEMBLER  MAIN                                                                 11/08/2024 09:32:19 PAGE     5
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+BUTTON1. . . . . .  B ADDR   00B0H.2 A   
+BUTTON2. . . . . .  B ADDR   00B0H.3 A   
+BUZZER . . . . . .  B ADDR   00A0H.4 A   
+CHECK_1. . . . . .  C ADDR   00B4H   A   
+CHECK_2. . . . . .  C ADDR   00BAH   A   
+CHECK_3. . . . . .  C ADDR   00C0H   A   
+CHECK_4. . . . . .  C ADDR   00C6H   A   
+CHECK_5. . . . . .  C ADDR   00CCH   A   
+CHECK_6. . . . . .  C ADDR   00D2H   A   
+CHECK_7. . . . . .  C ADDR   00D8H   A   
+CHECK_8. . . . . .  C ADDR   00DEH   A   
+CHECK_9. . . . . .  C ADDR   00E4H   A   
+CONVERT_DIGIT. . .  C ADDR   00AEH   A   
+CORRECT. . . . . .  C ADDR   0084H   A   
+D1 . . . . . . . .  C ADDR   00F5H   A   
+D2 . . . . . . . .  C ADDR   00F7H   A   
+D3 . . . . . . . .  C ADDR   00F9H   A   
+DATA_7SEG. . . . .  D ADDR   0080H   A   
+DELAY. . . . . . .  C ADDR   00F3H   A   
+ERROR. . . . . . .  C ADDR   00EAH   A   
+INCORRECT. . . . .  C ADDR   008EH   A   
+INCREMENT_DISPLAY.  C ADDR   002BH   A   
+INDEX. . . . . . .  N NUMB   0030H   A   
+LED1 . . . . . . .  B ADDR   00A0H.2 A   
+LED2 . . . . . . .  B ADDR   00A0H.3 A   
+LED_GREEN. . . . .  B ADDR   00A0H.6 A   
+LED_RED. . . . . .  B ADDR   00A0H.7 A   
+LOOP . . . . . . .  C ADDR   0023H   A   
+MA7SEG . . . . . .  C ADDR   0100H   A   
+MAIN . . . . . . .  C ADDR   0000H   A   
+P0 . . . . . . . .  D ADDR   0080H   A   
+P2 . . . . . . . .  D ADDR   00A0H   A   
+P3 . . . . . . . .  D ADDR   00B0H   A   
+RESET. . . . . . .  C ADDR   0098H   A   
+SAVE_NUMBER. . . .  C ADDR   003CH   A   
+SBUF . . . . . . .  D ADDR   0099H   A   
+SCON . . . . . . .  D ADDR   0098H   A   
+SEG_TO_ASCII . . .  C ADDR   009DH   A   
+TH1. . . . . . . .  D ADDR   008DH   A   
+TI . . . . . . . .  B ADDR   0098H.1 A   
+TMOD . . . . . . .  D ADDR   0089H   A   
+TR1. . . . . . . .  B ADDR   0088H.6 A   
+UART_BUFFER. . . .  C ADDR   0000H   A   
+WAIT_UART. . . . .  C ADDR   00EDH   A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)

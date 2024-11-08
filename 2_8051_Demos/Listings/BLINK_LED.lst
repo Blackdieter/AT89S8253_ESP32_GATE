@@ -1,0 +1,72 @@
+A51 MACRO ASSEMBLER  BLINK_LED                                                            11/08/2024 08:02:19 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\BLINK_LED.obj
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE BLINK_LED.A SET(SMALL) DEBUG PRINT(.\Listings\BLINK_LED.lst) OBJECT(.\O
+                      bjects\BLINK_LED.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+0000                   1     ORG 0000H         ; Start program from address 0000H
+                       2     
+                       3     ; Step 1: Initialize registers with numbers
+0000 7801              4     MOV R0, #01H      ; Load 1 into R0
+0002 7902              5     MOV R1, #02H      ; Load 2 into R1
+0004 7A03              6     MOV R2, #03H      ; Load 3 into R2
+0006 7B04              7     MOV R3, #04H      ; Load 4 into R3
+                       8     
+                       9     ; Step 2: Initialize UART for 9600 baud rate
+0008 758920           10     MOV TMOD, #20H    ; Timer 1 in Mode 2 (8-bit auto-reload)
+000B 758DFD           11     MOV TH1, #0FDH    ; Set baud rate to 9600 (assuming 11.0592 MHz clock)
+000E 759850           12     MOV SCON, #50H    ; Set UART mode 1, 8-bit UART, REN enabled
+0011 D28E             13     SETB TR1          ; Start Timer 1
+                      14     
+                      15     ; Step 3: Transmit "1234" as a string over UART
+0013 E8               16     MOV A, R0         ; Move content of R0 (1) to Accumulator
+0014 2430             17     ADD A, #30H       ; Convert 1 to ASCII ('1')
+0016 F599             18     MOV SBUF, A       ; Send '1' over UART
+0018 112F             19     ACALL WAIT_UART   ; Wait until transmission is complete
+                      20     
+001A E9               21     MOV A, R1         ; Move content of R1 (2) to Accumulator
+001B 2430             22     ADD A, #30H       ; Convert 2 to ASCII ('2')
+001D F599             23     MOV SBUF, A       ; Send '2' over UART
+001F 112F             24     ACALL WAIT_UART   ; Wait until transmission is complete
+                      25     
+0021 EA               26     MOV A, R2         ; Move content of R2 (3) to Accumulator
+0022 2430             27     ADD A, #30H       ; Convert 3 to ASCII ('3')
+0024 F599             28     MOV SBUF, A       ; Send '3' over UART
+0026 112F             29     ACALL WAIT_UART   ; Wait until transmission is complete
+                      30     
+0028 EB               31     MOV A, R3         ; Move content of R3 (4) to Accumulator
+0029 2430             32     ADD A, #30H       ; Convert 4 to ASCII ('4')
+002B F599             33     MOV SBUF, A       ; Send '4' over UART
+002D 112F             34     ACALL WAIT_UART   ; Wait until transmission is complete
+                      35     
+                      36     
+002F                  37     WAIT_UART:
+002F 3099FD           38        JNB TI, WAIT_UART ; Wait for the TI (Transmit Interrupt) flag to set
+0032 C299             39        CLR TI            ; Clear TI flag for the next transmission
+0034 22               40        RET               ; Return to the main program
+                      41     END               ; End of program
+A51 MACRO ASSEMBLER  BLINK_LED                                                            11/08/2024 08:02:19 PAGE     2
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+SBUF . . . . . . .  D ADDR   0099H   A   
+SCON . . . . . . .  D ADDR   0098H   A   
+TH1. . . . . . . .  D ADDR   008DH   A   
+TI . . . . . . . .  B ADDR   0098H.1 A   
+TMOD . . . . . . .  D ADDR   0089H   A   
+TR1. . . . . . . .  B ADDR   0088H.6 A   
+WAIT_UART. . . . .  C ADDR   002FH   A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)

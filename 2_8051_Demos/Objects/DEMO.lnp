@@ -1,0 +1,3 @@
+".\Objects\UART_DEMO.obj" 
+TO ".\Objects\DEMO" 
+PRINT(".\Listings\DEMO.m51")
