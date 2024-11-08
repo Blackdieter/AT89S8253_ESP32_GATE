@@ -6,7 +6,7 @@ BUTTON2      BIT P3.3               ; BUTTON 2 INPUT ON PORT 3.3
 LED_GREEN    BIT P2.6               ; GREEN LED BIT
 LED_RED      BIT P2.7               ; RED LED BIT
 BUZZER       BIT P2.4
-INDEX        EQU 0x30
+INDEX        EQU 0x30				; COUNT FOR NUMBER OF DIGITS ENTERED
 
 UART_BUFFER: DS 4                   ; RESERVE 4 BYTES FOR ASCII CHARACTERS
 
@@ -17,7 +17,7 @@ MAIN:
     MOV TH1, #0FDH                ; SET BAUD RATE TO 9600 (11.0592 MHZ CLOCK)
     MOV SCON, #50H                ; UART MODE 1, 8-BIT UART, REN ENABLED
     SETB TR1                      ; START TIMER 1
-
+	
     ; CONFIGURE PARAMETERS
     MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
     CLR A                         ; CLEAR ACCUMULATOR
@@ -47,7 +47,7 @@ INCREMENT_DISPLAY:
     INC DPTR                       ; INCREMENT DPTR FOR NEXT VALUE
     MOVC A, @A+DPTR                ; LOAD NEXT PATTERN FROM MA7SEG
     MOV DATA_7SEG, A               ; DISPLAY NUMBER ON 7-SEGMENT
-    CALL DELAY                     ; DEBOUNCE DELAY
+    ACALL DELAY                     ; DEBOUNCE DELAY
 
     ; CHECK IF VALUE IS NOT 0x90 (9)
     CJNE A, #0x90, LOOP
@@ -70,7 +70,8 @@ SAVE_NUMBER:
     MOV DPTR, #MA7SEG             ; RESET DPTR TO START OF MA7SEG
     MOVC A, @A+DPTR
     MOV DATA_7SEG, A              ; DISPLAY NEXT VALUE ON 7-SEGMENT
-    CALL DELAY                    ; DEBOUNCE DELAY
+	ACALL CHECK_INDEX			  ; DISPLAY THE LED FOR SUBMITTED VALUE
+    ACALL DELAY                    ; DEBOUNCE DELAY
 
     ; CHECK IF INDEX IS 4
     INC INDEX
@@ -78,7 +79,9 @@ SAVE_NUMBER:
     CJNE A, #4, LOOP              ; IF NOT, GO BACK TO LOOP
 
     ; COMPARISON OF ENTERED NUMBERS WITH PASSWORD (1, 1, 1, 1)
+	MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
     SETB LED2                     ; ENABLE SECOND DISPLAY
+	MOV P1, #0xFF					  ; TURN ON ALL LED
     MOV DATA_7SEG, #0x89          ; DISPLAY 'H'
 
     ; CONVERT 7-SEGMENT CODES TO ASCII
@@ -117,18 +120,43 @@ SAVE_NUMBER:
 	CORRECT:
 		CLR LED_RED                  ; TURN OFF RED LED
 		SETB LED_GREEN               ; TURN ON GREEN LED
-		CALL DELAY
-		CALL DELAY
+		ACALL DELAY
+		ACALL DELAY
 		SJMP RESET
 	INCORRECT:
 		CLR LED_GREEN                ; TURN OFF GREEN LED
 		SETB LED_RED                 ; TURN ON RED LED
-		CALL DELAY
-		CALL DELAY
+		ACALL DELAY
+		ACALL DELAY
 		SJMP RESET
 	RESET:
 		MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
-		SJMP LOOP                    ; RESTART PROGRAM
+		AJMP LOOP                    ; RESTART PROGRAM
+; SUBROUTINE DEFINE HERE
+
+CHECK_INDEX:
+    ; Compare index with 0
+    MOV A, index            ; Load the value of index into the accumulator
+    CJNE A, #0, CHECK_1L     ; If index ? 0, jump to CHECK_1
+    CLR P1.2               ; Set P1.2 if index = 0
+    RET                     ; Return from subroutine
+
+CHECK_1L:
+    CJNE A, #1, CHECK_2L     ; If index ? 1, jump to CHECK_2
+    CLR P1.3               ; Set P1.3 if index = 1
+    RET                     ; Return from subroutine
+
+CHECK_2L:
+    CJNE A, #2, CHECK_3L     ; If index ? 2, jump to CHECK_3
+    CLR P1.4               ; Set P1.4 if index = 2
+    RET                     ; Return from subroutine
+
+CHECK_3L:
+    CJNE A, #3, END_CHECKL   ; If index ? 3, jump to END_CHECK
+    CLR P1.5               ; Set P1.5 if index = 3
+
+END_CHECKL:
+    RET                     ; Return from subroutine
 
 SEG_TO_ASCII:
     MOV A, R0
