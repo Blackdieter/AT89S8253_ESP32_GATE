@@ -1,0 +1,148 @@
+A51 MACRO ASSEMBLER  UART_RECEIVE_AND_SEND_IT_EEPROM                                      11/09/2024 00:49:49 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\UART_RECEIVE_AND_SEND_IT_EEPROM.obj
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE UART_RECEIVE_AND_SEND_IT_EEPROM.a51 SET(SMALL) DEBUG PRINT(.\Listings\U
+                      ART_RECEIVE_AND_SEND_IT_EEPROM.lst) OBJECT(.\Objects\UART_RECEIVE_AND_SEND_IT_EEPROM.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+                       1     ;===============================================================
+                       2     ; UART Reception and Transmission Program in Full-Duplex Mode
+                       3     ;===============================================================
+  00A6                 4     LED_GREEN    BIT P2.6               ; GREEN LED BIT
+                       5     
+0000                   6     ORG 0000H
+                       7         ; Other initialization code here
+0000 8024              8         JMP MAIN            ; Jump to main code after reset
+                       9     
+0023                  10     ORG 0023H               ; UART Interrupt Vector Address
+0023 02003F           11         LJMP RECEIVE_DATA   ; Jump to receive data handler on UART interrupt
+                      12             
+                      13     ; Main Program
+0026                  14     MAIN:
+                      15         ; UART Initialization for Interrupt
+0026 758920           16         MOV TMOD, #20H      ; Timer1, Mode2 (8-bit auto-reload) for baud rate
+0029 758DFD           17         MOV TH1, #0FDH      ; Set baud rate to 9600 (assuming 11.0592 MHz clock)
+002C 759850           18         MOV SCON, #50H      ; 8-bit UART, REN enabled
+002F 75A890           19         MOV IE, #10010000B  ; Enable Serial Interrupt (ES) and Global Interrupt (EA)
+0032 D28E             20         SETB TR1            ; Start Timer1
+                      21                 ; Other tasks that can run concurrently
+                      22                     
+0034                  23             LOOP:
+0034 7590FF           24         MOV P1,#0xFF                ;
+0037 113E             25             ACALL DELAY
+0039 759000           26         MOV P1,#0x00                ;
+003C 80F6             27             SJMP LOOP
+                      28     
+                      29             
+003E                  30     DELAY:
+003E 22               31                     RET
+                      32             
+                      33     ;===============================================================
+                      34     ; Subroutine: RECEIVE_DATA
+                      35     ; Purpose: Receives a string, detects "Pxxxx" format, and echoes it
+                      36     ;===============================================================
+                      37     
+003F                  38     RECEIVE_DATA:
+                      39             
+                      40             ; Store received character in the second register bank
+003F C0D0             41         PUSH PSW            ; Save the current PSW
+0041 75D010           42             MOV PSW, #10H       ; Select Bank 2 (registers R8 to R15)
+                      43     
+                      44         ; Wait to receive 'P' character
+0044 115A             45         ACALL RECEIVE_CHAR     ; Get character from UART
+0046 B450F6           46         CJNE A, #'P', RECEIVE_DATA ; If not 'P', keep waiting
+                      47         
+                      48         ; 'P' detected, proceed to receive next 4 characters
+0049 115A             49         ACALL RECEIVE_CHAR     ; Get first number
+004B F8               50         MOV R0, A              ; Store in R0
+004C 115A             51         ACALL RECEIVE_CHAR     ; Get second number
+004E F9               52         MOV R1, A              ; Store in R1
+004F 115A             53         ACALL RECEIVE_CHAR     ; Get third number
+0051 FA               54         MOV R2, A              ; Store in R2
+0052 115A             55         ACALL RECEIVE_CHAR     ; Get fourth number
+0054 FB               56         MOV R3, A              ; Store in R3
+                      57     
+A51 MACRO ASSEMBLER  UART_RECEIVE_AND_SEND_IT_EEPROM                                      11/09/2024 00:49:49 PAGE     2
+
+                      58         ; Send back received numbers over UART
+0055 1162             59         ACALL SEND_RESPONSE
+0057 D0D0             60             POP PSW             ; Restore original PSW
+                      61     
+0059 32               62         RETI                ; Return from interrupt
+                      63     
+                      64     ;===============================================================
+                      65     ; Subroutine: RECEIVE_CHAR
+                      66     ; Purpose: Waits until a character is received in UART and loads it into A
+                      67     ;===============================================================
+                      68     
+005A                  69     RECEIVE_CHAR:
+005A 3098FD           70         JNB RI, RECEIVE_CHAR   ; Wait until a character is received
+005D E599             71         MOV A, SBUF            ; Move received byte to Accumulator
+005F C298             72         CLR RI                 ; Clear RI for next reception
+0061 22               73         RET
+                      74     
+                      75     ;===============================================================
+                      76     ; Subroutine: SEND_RESPONSE
+                      77     ; Purpose: Sends R0-R3 content back over UART as ASCII characters
+                      78     ;===============================================================
+                      79     
+0062                  80     SEND_RESPONSE:
+0062 E8               81         MOV A, R0              ; Load first digit
+0063 116F             82         ACALL SEND_CHAR        ; Send character
+0065 E9               83         MOV A, R1              ; Load second digit
+0066 116F             84         ACALL SEND_CHAR        ; Send character
+0068 EA               85         MOV A, R2              ; Load third digit
+0069 116F             86         ACALL SEND_CHAR        ; Send character
+006B EB               87         MOV A, R3              ; Load fourth digit
+006C 116F             88         ACALL SEND_CHAR        ; Send character
+006E 22               89         RET
+                      90     
+                      91     ;===============================================================
+                      92     ; Subroutine: SEND_CHAR
+                      93     ; Purpose: Sends character in A over UART
+                      94     ;===============================================================
+                      95     
+006F                  96     SEND_CHAR:
+006F F599             97         MOV SBUF, A            ; Load A into SBUF to transmit
+0071 3099FD           98         JNB TI, $              ; Wait for transmission to complete
+0074 C299             99         CLR TI                 ; Clear transmit interrupt flag
+0076 22              100         RET
+                     101             
+                     102     
+                     103     END
+A51 MACRO ASSEMBLER  UART_RECEIVE_AND_SEND_IT_EEPROM                                      11/09/2024 00:49:49 PAGE     3
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+DELAY. . . . . . .  C ADDR   003EH   A   
+IE . . . . . . . .  D ADDR   00A8H   A   
+LED_GREEN. . . . .  B ADDR   00A0H.6 A   
+LOOP . . . . . . .  C ADDR   0034H   A   
+MAIN . . . . . . .  C ADDR   0026H   A   
+P1 . . . . . . . .  D ADDR   0090H   A   
+P2 . . . . . . . .  D ADDR   00A0H   A   
+PSW. . . . . . . .  D ADDR   00D0H   A   
+RECEIVE_CHAR . . .  C ADDR   005AH   A   
+RECEIVE_DATA . . .  C ADDR   003FH   A   
+RI . . . . . . . .  B ADDR   0098H.0 A   
+SBUF . . . . . . .  D ADDR   0099H   A   
+SCON . . . . . . .  D ADDR   0098H   A   
+SEND_CHAR. . . . .  C ADDR   006FH   A   
+SEND_RESPONSE. . .  C ADDR   0062H   A   
+TH1. . . . . . . .  D ADDR   008DH   A   
+TI . . . . . . . .  B ADDR   0098H.1 A   
+TMOD . . . . . . .  D ADDR   0089H   A   
+TR1. . . . . . . .  B ADDR   0088H.6 A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)

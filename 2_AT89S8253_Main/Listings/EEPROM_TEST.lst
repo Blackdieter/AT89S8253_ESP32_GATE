@@ -1,0 +1,135 @@
+A51 MACRO ASSEMBLER  EEPROM_TEST                                                          11/09/2024 22:01:02 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\EEPROM_TEST.obj
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE EEPROM_TEST.a51 SET(SMALL) DEBUG PRINT(.\Listings\EEPROM_TEST.lst) OBJE
+                      CT(.\Objects\EEPROM_TEST.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+                       1     ;===============================================================
+                       2     ; UART Reception and Transmission Program in Full-Duplex Mode
+                       3     ;===============================================================
+                       4     
+0000                   5     ORG 0000H             ; Start program from address 0000H
+                       6     
+                       7     ; UART Initialization for 9600 baud rate in Full-Duplex Mode
+0000 758920            8     MOV TMOD, #20H        ; Timer 1 in Mode 2 (8-bit auto-reload)
+0003 758DFD            9     MOV TH1, #0FDH        ; Set baud rate to 9600 (assuming 11.0592 MHz clock)
+0006 759850           10     MOV SCON, #50H        ; Set UART mode 1, 8-bit UART, REN enabled
+0009 D28E             11     SETB TR1              ; Start Timer 1
+000B                  12     UART_BUFFER: DS 4                   ; RESERVE 4 BYTES FOR ASCII CHARACTERS
+                      13     
+                      14     ; Main Program
+000F                  15     MAIN:
+000F 1113             16         ACALL RECEIVE_DATA     ; Call subroutine to receive data
+0011 80FC             17         SJMP MAIN              ; Repeat process indefinitely
+                      18     
+                      19     ;===============================================================
+                      20     ; Subroutine: RECEIVE_DATA
+                      21     ; Purpose: Receives a string, detects "Pxxxx" format, and echoes it
+                      22     ;===============================================================
+                      23     
+0013                  24     RECEIVE_DATA:
+                      25     
+                      26         ; Wait to receive 'P' character
+0013 1129             27         ACALL RECEIVE_CHAR     ; Get character from UART
+0015 B450FB           28         CJNE A, #'P', RECEIVE_DATA ; If not 'P', keep waiting
+                      29     
+                      30         ; 'P' detected, proceed to receive next 4 characters
+0018 1129             31         ACALL RECEIVE_CHAR     ; Get first number
+001A F8               32         MOV R0, A              ; Store in R0
+001B 1129             33         ACALL RECEIVE_CHAR     ; Get second number
+001D F9               34         MOV R1, A              ; Store in R1
+001E 1129             35         ACALL RECEIVE_CHAR     ; Get third number
+0020 FA               36         MOV R2, A              ; Store in R2
+0021 1129             37         ACALL RECEIVE_CHAR     ; Get fourth number
+0023 FB               38         MOV R3, A              ; Store in R3
+                      39     
+                      40         ; Send back received numbers over UART
+0024 1146             41             ACALL READ_EEPROM
+0026 1131             42         ACALL SEND_RESPONSE
+0028 22               43         RET                    ; Return to MAIN loop
+                      44     
+                      45     ;===============================================================
+                      46     ; Subroutine: RECEIVE_CHAR
+                      47     ; Purpose: Waits until a character is received in UART and loads it into A
+                      48     ;===============================================================
+                      49     
+0029                  50     RECEIVE_CHAR:
+0029 3098FD           51         JNB RI, RECEIVE_CHAR   ; Wait until a character is received
+002C E599             52         MOV A, SBUF            ; Move received byte to Accumulator
+002E C298             53         CLR RI                 ; Clear RI for next reception
+0030 22               54         RET
+                      55     
+                      56     ;===============================================================
+                      57     ; Subroutine: SEND_RESPONSE
+A51 MACRO ASSEMBLER  EEPROM_TEST                                                          11/09/2024 22:01:02 PAGE     2
+
+                      58     ; Purpose: Sends R0-R3 content back over UART as ASCII characters
+                      59     ;===============================================================
+                      60     
+0031                  61     SEND_RESPONSE:
+0031 E8               62         MOV A, R0              ; Load first digit
+0032 113E             63         ACALL SEND_CHAR        ; Send character
+0034 E9               64         MOV A, R1              ; Load second digit
+0035 113E             65         ACALL SEND_CHAR        ; Send character
+0037 EA               66         MOV A, R2              ; Load third digit
+0038 113E             67         ACALL SEND_CHAR        ; Send character
+003A EB               68         MOV A, R3              ; Load fourth digit
+003B 113E             69         ACALL SEND_CHAR        ; Send character
+003D 22               70         RET
+                      71     
+                      72     ;===============================================================
+                      73     ; Subroutine: SEND_CHAR
+                      74     ; Purpose: Sends character in A over UART
+                      75     ;===============================================================
+                      76     
+003E                  77     SEND_CHAR:
+003E F599             78         MOV SBUF, A            ; Load A into SBUF to transmit
+0040 3099FD           79         JNB TI, $              ; Wait for transmission to complete
+0043 C299             80         CLR TI                 ; Clear transmit interrupt flag
+0045 22               81         RET
+                      82             
+0046                  83     READ_EEPROM:
+0046 7C39             84             MOV R4,#'9'
+0048 900001           85             MOV DPTR, #0x01            ; Set address pointer to EEPROM address 0x00
+004B EC               86         MOV A, R4                  ; Load R0 (first digit of "1234") into accumulator
+004C F0               87             MOVX @DPTR, A
+004D 900001           88             MOV DPTR, #0x01            ; Set address pointer to EEPROM address 0x00
+0050 EC               89             MOV A, R4              ; Load EEPROM data at DPTR address into A
+0051 F8               90             MOV R0, A
+0052 22               91             RET
+                      92     
+                      93     END
+                             
+                             
+A51 MACRO ASSEMBLER  EEPROM_TEST                                                          11/09/2024 22:01:02 PAGE     3
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+MAIN . . . . . . .  C ADDR   000FH   A   
+READ_EEPROM. . . .  C ADDR   0046H   A   
+RECEIVE_CHAR . . .  C ADDR   0029H   A   
+RECEIVE_DATA . . .  C ADDR   0013H   A   
+RI . . . . . . . .  B ADDR   0098H.0 A   
+SBUF . . . . . . .  D ADDR   0099H   A   
+SCON . . . . . . .  D ADDR   0098H   A   
+SEND_CHAR. . . . .  C ADDR   003EH   A   
+SEND_RESPONSE. . .  C ADDR   0031H   A   
+TH1. . . . . . . .  D ADDR   008DH   A   
+TI . . . . . . . .  B ADDR   0098H.1 A   
+TMOD . . . . . . .  D ADDR   0089H   A   
+TR1. . . . . . . .  B ADDR   0088H.6 A   
+UART_BUFFER. . . .  C ADDR   000BH   A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)
