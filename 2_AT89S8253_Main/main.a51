@@ -17,18 +17,20 @@ MAIN:
     MOV TH1, #0FDH                ; SET BAUD RATE TO 9600 (11.0592 MHZ CLOCK)
     MOV SCON, #50H                ; UART MODE 1, 8-BIT UART, REN ENABLED
     SETB TR1                      ; START TIMER 1
-	
-    ; CONFIGURE PARAMETERS
-    MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
-    CLR A                         ; CLEAR ACCUMULATOR
 
     ; CONFIGURE PINS
     CLR BUZZER
     CLR LED_RED
     CLR LED_GREEN                 ; TURN OFF GREEN LED INITIALLY
+	INIT:
+	MOV P1, #0xFF				  ; TURN ON ALL SUBMITTED LED
     SETB LED2
     SETB BUTTON1                  ; SET BUTTON1 AS INPUT
     SETB BUTTON2                  ; SET BUTTON2 AS INPUT
+	
+    ; CONFIGURE PARAMETERS
+    MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
+    CLR A                         ; CLEAR ACCUMULATOR
     
     ; DISPLAY INITIAL VALUE (8) ON 7-SEGMENT
     MOV DATA_7SEG, #0x89
@@ -39,15 +41,17 @@ LOOP:
     ; CHECK BUTTON STATES
     JNB BUTTON1, INCREMENT_DISPLAY  ; IF BUTTON1 PRESSED, GO TO INCREMENT_DISPLAY
     JNB BUTTON2, SAVE_NUMBER        ; IF BUTTON2 PRESSED, GO TO SAVE_NUMBER
-    SJMP LOOP                       ; OTHERWISE, KEEP LOOPING
-
+	; CHECK IF UART DATA IS RECEIVED
+    JNB RI, LOOP            ; IF RI IS NOT SET, NO NEW UART DATA
+    ACALL RECEIVE_DATA              ; IF RI IS SET, CALL RECEIVE_DATA TO PROCESS UART INPUT
+	
 INCREMENT_DISPLAY:
     CLR LED2                       ; DISABLE 7-SEGMENT DISPLAY #2
     CLR A                          ; CLEAR ACCUMULATOR
     INC DPTR                       ; INCREMENT DPTR FOR NEXT VALUE
     MOVC A, @A+DPTR                ; LOAD NEXT PATTERN FROM MA7SEG
     MOV DATA_7SEG, A               ; DISPLAY NUMBER ON 7-SEGMENT
-    ACALL DELAY                     ; DEBOUNCE DELAY
+	ACALL BUZZER_ON				   ; BUZZ AND DELAY
 
     ; CHECK IF VALUE IS NOT 0x90 (9)
     CJNE A, #0x90, LOOP
@@ -71,7 +75,7 @@ SAVE_NUMBER:
     MOVC A, @A+DPTR
     MOV DATA_7SEG, A              ; DISPLAY NEXT VALUE ON 7-SEGMENT
 	ACALL CHECK_INDEX			  ; DISPLAY THE LED FOR SUBMITTED VALUE
-    ACALL DELAY                    ; DEBOUNCE DELAY
+	ACALL BUZZER_ON				  ; BUZZ AND DELAY
 
     ; CHECK IF INDEX IS 4
     INC INDEX
@@ -79,11 +83,6 @@ SAVE_NUMBER:
     CJNE A, #4, LOOP              ; IF NOT, GO BACK TO LOOP
 
     ; COMPARISON OF ENTERED NUMBERS WITH PASSWORD (1, 1, 1, 1)
-	MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
-    SETB LED2                     ; ENABLE SECOND DISPLAY
-	MOV P1, #0xFF					  ; TURN ON ALL LED
-    MOV DATA_7SEG, #0x89          ; DISPLAY 'H'
-
     ; CONVERT 7-SEGMENT CODES TO ASCII
     ACALL SEG_TO_ASCII
 
@@ -116,22 +115,24 @@ SAVE_NUMBER:
     CJNE A, #'0', INCORRECT
     MOV A, R0
     CJNE A, #'0', INCORRECT
-
+	
 	CORRECT:
 		CLR LED_RED                  ; TURN OFF RED LED
 		SETB LED_GREEN               ; TURN ON GREEN LED
-		ACALL DELAY
-		ACALL DELAY
+		ACALL BUZZER_ON
+		ACALL BUZZER_ON
+		ACALL BUZZER_ON
 		SJMP RESET
 	INCORRECT:
 		CLR LED_GREEN                ; TURN OFF GREEN LED
 		SETB LED_RED                 ; TURN ON RED LED
-		ACALL DELAY
-		ACALL DELAY
+		ACALL BUZZER_ON
+		ACALL BUZZER_ON
 		SJMP RESET
 	RESET:
 		MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
-		AJMP LOOP                    ; RESTART PROGRAM
+		AJMP INIT                    ; RESTART PROGRAM
+		
 ; SUBROUTINE DEFINE HERE
 
 CHECK_INDEX:
@@ -140,23 +141,19 @@ CHECK_INDEX:
     CJNE A, #0, CHECK_1L     ; If index ? 0, jump to CHECK_1
     CLR P1.2               ; Set P1.2 if index = 0
     RET                     ; Return from subroutine
-
-CHECK_1L:
-    CJNE A, #1, CHECK_2L     ; If index ? 1, jump to CHECK_2
-    CLR P1.3               ; Set P1.3 if index = 1
-    RET                     ; Return from subroutine
-
-CHECK_2L:
-    CJNE A, #2, CHECK_3L     ; If index ? 2, jump to CHECK_3
-    CLR P1.4               ; Set P1.4 if index = 2
-    RET                     ; Return from subroutine
-
-CHECK_3L:
-    CJNE A, #3, END_CHECKL   ; If index ? 3, jump to END_CHECK
-    CLR P1.5               ; Set P1.5 if index = 3
-
-END_CHECKL:
-    RET                     ; Return from subroutine
+	CHECK_1L:
+		CJNE A, #1, CHECK_2L     ; If index ? 1, jump to CHECK_2
+		CLR P1.3               ; Set P1.3 if index = 1
+		RET                     ; Return from subroutine
+	CHECK_2L:
+		CJNE A, #2, CHECK_3L     ; If index ? 2, jump to CHECK_3
+		CLR P1.4               ; Set P1.4 if index = 2
+		RET                     ; Return from subroutine
+	CHECK_3L:
+		CJNE A, #3, END_CHECKL   ; If index ? 3, jump to END_CHECK
+		CLR P1.5               ; Set P1.5 if index = 3
+	END_CHECKL:
+		RET                     ; Return from subroutine
 
 SEG_TO_ASCII:
     MOV A, R0
@@ -219,20 +216,93 @@ SEG_TO_ASCII:
 		ERROR:
 			MOV A, #'?'
 			RET
+			
+;===============================================================
+; Subroutine: RECEIVE_DATA
+; Purpose: Receives a string, detects "Pxxxx" format, and echoes it
+;===============================================================
+RECEIVE_DATA:
+    ; Wait to receive 'P' character
+    ACALL RECEIVE_CHAR     ; Get character from UART
+    CJNE A, #'P', RECEIVE_DATA ; If not 'P', keep waiting
+    
+    ; 'P' detected, proceed to receive next 4 characters
+    ACALL RECEIVE_CHAR     ; Get first number
+    MOV R0, A              ; Store in R0
+    ACALL RECEIVE_CHAR     ; Get second number
+    MOV R1, A              ; Store in R1
+    ACALL RECEIVE_CHAR     ; Get third number
+    MOV R2, A              ; Store in R2
+    ACALL RECEIVE_CHAR     ; Get fourth number
+    MOV R3, A              ; Store in R3
 
+    ; Send back received numbers over UART
+    ACALL SEND_RESPONSE
+	
+    RET                    ; Return to MAIN loop
+	;===============================================================
+	; Subroutine: RECEIVE_CHAR
+	; Purpose: Waits until a character is received in UART and loads it into A
+	;===============================================================
+	RECEIVE_CHAR:
+		JNB RI, RECEIVE_CHAR   ; Wait until a character is received
+		MOV A, SBUF            ; Move received byte to Accumulator
+		CLR RI                 ; Clear RI for next reception
+		RET
+		
+;===============================================================
+; Subroutine: SEND_RESPONSE
+; Purpose: Sends R0-R3 content back over UART as ASCII characters
+;===============================================================
+	SEND_RESPONSE:
+		MOV A, R0              ; Load first digit
+		ACALL SEND_CHAR        ; Send character
+		MOV A, R1              ; Load second digit
+		ACALL SEND_CHAR        ; Send character
+		MOV A, R2              ; Load third digit
+		ACALL SEND_CHAR        ; Send character
+		MOV A, R3              ; Load fourth digit
+		ACALL SEND_CHAR        ; Send character
+		RET
+	;===============================================================
+	; Subroutine: SEND_CHAR
+	; Purpose: Sends character in A over UART
+	;===============================================================
+		SEND_CHAR:
+			MOV SBUF, A            ; Load A into SBUF to transmit
+			JNB TI, $              ; Wait for transmission to complete
+			CLR TI                 ; Clear transmit interrupt flag
+			RET
+	
 WAIT_UART:
-    JNB TI, WAIT_UART
-    CLR TI
-    RET
+	JNB TI, WAIT_UART
+	CLR TI
+	RET
+	
+BUZZER_ON:
+	SETB BUZZER
+	ACALL DELAY_B
+	CLR BUZZER
+	ACALL DELAY_B
+	RET
+	
+DELAY_B:
+		MOV R7, #2 			; (1/20)*1 ms
+	DB1:MOV R6, #250
+	DB2:MOV R5, #250
+	DB3:DJNZ R5, DB3
+		DJNZ R6, DB2
+		DJNZ R7, DB1
+		RET
 
 DELAY:
-    MOV R7, #4
-D1: MOV R6, #250
-D2: MOV R5, #250
-D3: DJNZ R5, D3
-    DJNZ R6, D2
-    DJNZ R7, D1
-    RET
+		MOV R7, #4 			; (4/20)*1 ms
+	D1: MOV R6, #250
+	D2: MOV R5, #250
+	D3: DJNZ R5, D3
+		DJNZ R6, D2
+		DJNZ R7, D1
+		RET
 
 ; 7-SEGMENT DISPLAY DATA FOR DIGITS 0-9
 MA7SEG:
