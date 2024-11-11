@@ -65,7 +65,7 @@ INCREMENT_DISPLAY:
     CJNE A, #0x90, LOOP
     ; RESET DPTR TO START OF MA7SEG AFTER REACHING 9
     MOV DPTR, #MA7SEG-1
-    SJMP INIT
+    SJMP LOOP
 
 SAVE_NUMBER:
 	
@@ -135,6 +135,7 @@ SAVE_NUMBER:
 	CORRECT:
 		CLR LED_RED                  ; TURN OFF RED LED
 		SETB LED_GREEN               ; TURN ON GREEN LED
+		ACALL DISPLAY_PASSWORD
 		ACALL BUZZER_ON
 		ACALL BUZZER_ON
 		ACALL BUZZER_ON
@@ -325,6 +326,33 @@ RECEIVE_DATA:
 			CLR TI                 ; Clear transmit interrupt flag
 			RET
 DISPLAY_PASSWORD:
+	MOV A, #'P'                 ; Load ASCII of 'P' into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #'A'                 ; Load ASCII of 'A' into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #'S'                 ; Load ASCII of 'S' into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #'S'                 ; Load ASCII of 'S' into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #'W'                 ; Load ASCII of 'W' into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #'O'                 ; Load ASCII of 'O' into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #'R'                 ; Load ASCII of 'R' into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #'D'                 ; Load ASCII of 'D' into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #' '                 ; Load ASCII of space into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #'I'                 ; Load ASCII of 'I' into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #'S'                 ; Load ASCII of 'S' into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #':'                 ; Load ASCII of ':' into A
+	ACALL SEND_CHAR             ; Send character via UART
+	MOV A, #' '                 ; Load ASCII of space into A
+	ACALL SEND_CHAR             ; Send character via UART
+
 	MOV A,0x31
 	ACALL SEND_CHAR
 	MOV A,0x32
@@ -335,7 +363,11 @@ DISPLAY_PASSWORD:
 	ACALL SEND_CHAR
 	MOV A, #' '
 	ACALL SEND_CHAR
-	ACALL DELAY		
+	MOV A, #0x0D                ; Load ASCII for Carriage Return (CR)		
+	ACALL SEND_CHAR             ; Send CR via UART
+	MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
+	ACALL SEND_CHAR             ; Send LF via UART
+	
 	RET
 	
 BUZZER_ON:
