@@ -1,0 +1,78 @@
+A51 MACRO ASSEMBLER  INTERUPT                                                             11/09/2024 00:39:59 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\INTERUPT.obj
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE INTERUPT.a51 SET(SMALL) DEBUG PRINT(.\Listings\INTERUPT.lst) OBJECT(.\O
+                      bjects\INTERUPT.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+0000                   1     ORG 0000H
+                       2         ; Other initialization code here
+0000 8024              3         JMP MAIN            ; Jump to main code after reset
+                       4     
+0023                   5     ORG 0023H               ; UART Interrupt Vector Address
+0023 020042            6         LJMP RECEIVE_DATA   ; Jump to receive data handler on UART interrupt
+                       7     
+0026                   8     MAIN:
+                       9         ; UART Initialization for Interrupt
+0026 758920           10         MOV TMOD, #20H      ; Timer1, Mode2 (8-bit auto-reload) for baud rate
+0029 758DFD           11         MOV TH1, #0FDH      ; Set baud rate to 9600 (assuming 11.0592 MHz clock)
+002C 759850           12         MOV SCON, #50H      ; 8-bit UART, REN enabled
+002F 75A890           13         MOV IE, #10010000B  ; Enable Serial Interrupt (ES) and Global Interrupt (EA)
+0032 D28E             14         SETB TR1            ; Start Timer1
+                      15     
+                      16         ; Other tasks that can run concurrently
+0034 758000           17         MOV P0,#0x00                ;
+0037 759000           18         MOV P1,#0x00                ;
+                      19     
+003A                  20                     LOOP:
+003A 7590FF           21         MOV P1,#0xFF                ;
+003D 759000           22         MOV P1,#0x00                ;
+0040 80F8             23             SJMP LOOP
+                      24     
+0042                  25     RECEIVE_DATA:
+                      26         ; Clear interrupt flag
+0042 C298             27         CLR RI              ; Clear RI flag to acknowledge interrupt
+                      28     
+                      29         ; Store received character in the second register bank
+0044 C0D0             30         PUSH PSW            ; Save the current PSW
+0046 75D010           31         MOV PSW, #10H       ; Select Bank 2 (registers R8 to R15)
+0049 E599             32         MOV A, SBUF         ; Move received byte from SBUF to Accumulator
+004B F8               33         MOV R0, A           ; Store data in R0 of Bank 2 for further processing
+004C D0D0             34         POP PSW             ; Restore original PSW
+                      35     
+                      36         ; Additional processing can be done here
+                      37     
+004E 32               38         RETI                ; Return from interrupt
+                      39             
+                      40     
+                      41     END
+A51 MACRO ASSEMBLER  INTERUPT                                                             11/09/2024 00:39:59 PAGE     2
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+IE . . . . . . . .  D ADDR   00A8H   A   
+LOOP . . . . . . .  C ADDR   003AH   A   
+MAIN . . . . . . .  C ADDR   0026H   A   
+P0 . . . . . . . .  D ADDR   0080H   A   
+P1 . . . . . . . .  D ADDR   0090H   A   
+PSW. . . . . . . .  D ADDR   00D0H   A   
+RECEIVE_DATA . . .  C ADDR   0042H   A   
+RI . . . . . . . .  B ADDR   0098H.0 A   
+SBUF . . . . . . .  D ADDR   0099H   A   
+SCON . . . . . . .  D ADDR   0098H   A   
+TH1. . . . . . . .  D ADDR   008DH   A   
+TMOD . . . . . . .  D ADDR   0089H   A   
+TR1. . . . . . . .  B ADDR   0088H.6 A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)

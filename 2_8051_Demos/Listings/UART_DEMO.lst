@@ -1,4 +1,4 @@
-A51 MACRO ASSEMBLER  UART_DEMO                                                            11/08/2024 09:36:29 PAGE     1
+A51 MACRO ASSEMBLER  UART_DEMO                                                            11/08/2024 22:44:20 PAGE     1
 
 
 MACRO ASSEMBLER A51 V8.2.7.0
@@ -8,11 +8,11 @@ ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE UART_DEMO.a51 SET(SMALL) DEBUG 
 
 LOC  OBJ            LINE     SOURCE
 
-                       1     ;=================================================
+                       1     ;=================================================================
                        2     ;
-                       3     ; Transfer 4 byte from r0 to r3 by UART
+                       3     ; Send 4 byte from r0 to r3 by UART (Chip -> Terminal)
                        4     ;
-                       5     ;=================================================
+                       5     ;=================================================================
                        6     
 0000                   7     ORG 0000H         ; Start program from address 0000H
                        8     
@@ -65,7 +65,7 @@ LOC  OBJ            LINE     SOURCE
 0036 F9               55        MOV R1, A        ; Store ASCII equivalent in R5
                       56     
 0037 EA               57        MOV A, R2
-A51 MACRO ASSEMBLER  UART_DEMO                                                            11/08/2024 09:36:29 PAGE     2
+A51 MACRO ASSEMBLER  UART_DEMO                                                            11/08/2024 22:44:20 PAGE     2
 
 0038 1140             58        ACALL CONVERT_DIGIT
 003A FA               59        MOV R2, A        ; Store ASCII equivalent in R6
@@ -132,7 +132,7 @@ LOC  OBJ            LINE     SOURCE
 007E 22              120        RET
                      121     
                      122     END               ; End of program
-A51 MACRO ASSEMBLER  UART_DEMO                                                            11/08/2024 09:36:29 PAGE     3
+A51 MACRO ASSEMBLER  UART_DEMO                                                            11/08/2024 22:44:20 PAGE     3
 
 SYMBOL TABLE LISTING
 ------ ----- -------

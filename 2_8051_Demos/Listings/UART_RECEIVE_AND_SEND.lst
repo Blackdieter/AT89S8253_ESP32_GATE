@@ -1,0 +1,124 @@
+A51 MACRO ASSEMBLER  UART_RECEIVE_AND_SEND                                                11/09/2024 20:50:27 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\UART_RECEIVE_AND_SEND.obj
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE UART_RECEIVE_AND_SEND.a51 SET(SMALL) DEBUG PRINT(.\Listings\UART_RECEIV
+                      E_AND_SEND.lst) OBJECT(.\Objects\UART_RECEIVE_AND_SEND.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+                       1     ;===============================================================
+                       2     ; UART Reception and Transmission Program in Full-Duplex Mode
+                       3     ;===============================================================
+                       4     
+0000                   5     ORG 0000H             ; Start program from address 0000H
+                       6     
+                       7     ; UART Initialization for 9600 baud rate in Full-Duplex Mode
+0000 758920            8     MOV TMOD, #20H        ; Timer 1 in Mode 2 (8-bit auto-reload)
+0003 758DFD            9     MOV TH1, #0FDH        ; Set baud rate to 9600 (assuming 11.0592 MHz clock)
+0006 759850           10     MOV SCON, #50H        ; Set UART mode 1, 8-bit UART, REN enabled
+0009 D28E             11     SETB TR1              ; Start Timer 1
+000B                  12     UART_BUFFER: DS 4                   ; RESERVE 4 BYTES FOR ASCII CHARACTERS
+                      13     
+                      14     ; Main Program
+000F                  15     MAIN:
+000F 1115             16         ACALL RECEIVE_DATA     ; Call subroutine to receive data
+0011 80FC             17         SJMP MAIN              ; Repeat process indefinitely
+0013 D2D3             18             SETB PSW.3           ; Select Bank 1 (RS0 = 1, RS1 = 0)
+                      19     
+                      20     ;===============================================================
+                      21     ; Subroutine: RECEIVE_DATA
+                      22     ; Purpose: Receives a string, detects "Pxxxx" format, and echoes it
+                      23     ;===============================================================
+                      24     
+0015                  25     RECEIVE_DATA:
+                      26     
+                      27         ; Wait to receive 'P' character
+0015 112B             28         ACALL RECEIVE_CHAR     ; Get character from UART
+0017 B450FB           29         CJNE A, #'P', RECEIVE_DATA ; If not 'P', keep waiting
+                      30     
+                      31         ; 'P' detected, proceed to receive next 4 characters
+001A 112B             32         ACALL RECEIVE_CHAR     ; Get first number
+001C F8               33         MOV R0, A              ; Store in R0
+001D 112B             34         ACALL RECEIVE_CHAR     ; Get second number
+001F F9               35         MOV R1, A              ; Store in R1
+0020 112B             36         ACALL RECEIVE_CHAR     ; Get third number
+0022 FA               37         MOV R2, A              ; Store in R2
+0023 112B             38         ACALL RECEIVE_CHAR     ; Get fourth number
+0025 FB               39         MOV R3, A              ; Store in R3
+                      40     
+                      41         ; Send back received numbers over UART
+0026 1133             42         ACALL SEND_RESPONSE
+0028 C2D3             43             CLR PSW.3
+002A 22               44         RET                    ; Return to MAIN loop
+                      45     
+                      46     ;===============================================================
+                      47     ; Subroutine: RECEIVE_CHAR
+                      48     ; Purpose: Waits until a character is received in UART and loads it into A
+                      49     ;===============================================================
+                      50     
+002B                  51     RECEIVE_CHAR:
+002B 3098FD           52         JNB RI, RECEIVE_CHAR   ; Wait until a character is received
+002E E599             53         MOV A, SBUF            ; Move received byte to Accumulator
+0030 C298             54         CLR RI                 ; Clear RI for next reception
+0032 22               55         RET
+                      56     
+                      57     ;===============================================================
+A51 MACRO ASSEMBLER  UART_RECEIVE_AND_SEND                                                11/09/2024 20:50:27 PAGE     2
+
+                      58     ; Subroutine: SEND_RESPONSE
+                      59     ; Purpose: Sends R0-R3 content back over UART as ASCII characters
+                      60     ;===============================================================
+                      61     
+0033                  62     SEND_RESPONSE:
+0033 E8               63         MOV A, R0              ; Load first digit
+0034 1140             64         ACALL SEND_CHAR        ; Send character
+0036 E9               65         MOV A, R1              ; Load second digit
+0037 1140             66         ACALL SEND_CHAR        ; Send character
+0039 EA               67         MOV A, R2              ; Load third digit
+003A 1140             68         ACALL SEND_CHAR        ; Send character
+003C EB               69         MOV A, R3              ; Load fourth digit
+003D 1140             70         ACALL SEND_CHAR        ; Send character
+003F 22               71         RET
+                      72     
+                      73     ;===============================================================
+                      74     ; Subroutine: SEND_CHAR
+                      75     ; Purpose: Sends character in A over UART
+                      76     ;===============================================================
+                      77     
+0040                  78     SEND_CHAR:
+0040 F599             79         MOV SBUF, A            ; Load A into SBUF to transmit
+0042 3099FD           80         JNB TI, $              ; Wait for transmission to complete
+0045 C299             81         CLR TI                 ; Clear transmit interrupt flag
+0047 22               82         RET
+                      83             
+                      84     END
+A51 MACRO ASSEMBLER  UART_RECEIVE_AND_SEND                                                11/09/2024 20:50:27 PAGE     3
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+MAIN . . . . . . .  C ADDR   000FH   A   
+PSW. . . . . . . .  D ADDR   00D0H   A   
+RECEIVE_CHAR . . .  C ADDR   002BH   A   
+RECEIVE_DATA . . .  C ADDR   0015H   A   
+RI . . . . . . . .  B ADDR   0098H.0 A   
+SBUF . . . . . . .  D ADDR   0099H   A   
+SCON . . . . . . .  D ADDR   0098H   A   
+SEND_CHAR. . . . .  C ADDR   0040H   A   
+SEND_RESPONSE. . .  C ADDR   0033H   A   
+TH1. . . . . . . .  D ADDR   008DH   A   
+TI . . . . . . . .  B ADDR   0098H.1 A   
+TMOD . . . . . . .  D ADDR   0089H   A   
+TR1. . . . . . . .  B ADDR   0088H.6 A   
+UART_BUFFER. . . .  C ADDR   000BH   A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)
