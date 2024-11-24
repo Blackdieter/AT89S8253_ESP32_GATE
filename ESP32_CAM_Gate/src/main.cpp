@@ -134,12 +134,6 @@ void setup() {
   initMicroSDCard();
 }
 void loop() {
-<<<<<<< HEAD
-    digitalWrite(flashPin, HIGH);
-    delay(1000);
-    digitalWrite(flashPin, LOW);
-    delay(1000);
-=======
   // Path where new picture will be saved in SD Card
   String path = "/picture" + String(pictureNumber) +".jpg";  
   Serial.printf("Picture file name: %s\n", path.c_str());
@@ -148,5 +142,4 @@ void loop() {
   takeSavePhoto(path);
   pictureNumber++;
   delay(5000); 
->>>>>>> 7ecb0802ea6e3459aaf515550200183f82832fec
 }
