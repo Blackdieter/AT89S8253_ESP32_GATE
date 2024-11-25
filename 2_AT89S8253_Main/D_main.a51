@@ -15,10 +15,13 @@ ORG 0000H           ; Reset vector
 SJMP MAIN           ; Jump to main program	
 ORG 0003H           ; External Interrupt 0 (INT0) vector
 SJMP INT0_ISR       ; Jump to INT0 interrupt service routine
+RETI
 ORG 0013H           ; External Interrupt 1 (INT1) vector
 SJMP INT1_ISR       ; Jump to INT1 interrupt service routine
+RETI
 ORG 23H         ; Interrupt vector for serial interrupt
 AJMP UART_ISR 
+RETI
 
 
 ;===============================================================
@@ -81,7 +84,7 @@ INT0_ISR:
     ; RESET DPTR TO START OF MA7SEG AFTER REACHING 9
     MOV DPTR, #MA7SEG-1
 	RETURN:
-	RETI                ; Return from interrupt
+	RET                ; Return from interrupt
 
 ; INT1 Interrupt Service Routine (Control the number submitted)
 INT1_ISR:
@@ -99,7 +102,6 @@ INT1_ISR:
     MOV R1, A                     ; MOVE PREVIOUS R0 TO R1
     MOV R0, DATA_7SEG             ; STORE NEW NUMBER IN R0
 
-	
 	; DISPLAY NUMBER 0 ON 7-SEGMENT
     CLR A
     MOV DPTR, #MA7SEG             ; RESET DPTR TO START OF MA7SEG
@@ -133,8 +135,9 @@ INT1_ISR:
 	ACALL SEND_CHAR             ; Send LF via UART
 	
 	ACALL CHEKC_PASSWORD		; Check with out password
+	;SJMP EXIT_1ISR
 	EXIT_1ISR:
-	RETI                ; Return from interrupt
+	RET                ; Return from interrupt
 	
 UART_ISR:
 	ACALL RECEIVE_CHAR     ; Get character from UART
@@ -158,7 +161,7 @@ UART_ISR:
 	ACALL SEND_RESPONSE
 	EXIT_ISR:
 	;CPL LED_GREEN ; For debug, if not P is inserted
-	RETI        ; Return from interrupt
+	RET        ; Return from interrupt
 	
 ;===============================================================
 ; Logical check subrotines
@@ -214,16 +217,16 @@ UART_ISR:
 			CLR LED_RED                  ; TURN OFF RED LED
 			SETB LED_GREEN               ; TURN ON GREEN LED
 			ACALL DISPLAY_PASSWORD
-			ACALL BUZZER_ON
-			ACALL BUZZER_ON
-			ACALL BUZZER_ON
+			;ACALL BUZZER_ON
+			;ACALL BUZZER_ON
+			;ACALL BUZZER_ON
 			SJMP RESET
 			INCORRECT:
 			CLR LED_GREEN                ; TURN OFF GREEN LED
 			SETB LED_RED                 ; TURN ON RED LED
-			ACALL BUZZER_ON
-			ACALL BUZZER_ON
-			SJMP RESET
+			;ACALL BUZZER_ON
+			;ACALL BUZZER_ON
+			;SJMP RESET
 			RESET:		
 			MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
 			MOV P1, #0xFF				  ; TURN ON ALL SUBMITTED LED
