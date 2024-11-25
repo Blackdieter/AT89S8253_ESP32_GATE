@@ -75,7 +75,6 @@ INT0_ISR:
     INC DPTR                       ; INCREMENT DPTR FOR NEXT VALUE
     MOVC A, @A+DPTR                ; LOAD NEXT PATTERN FROM MA7SEG
     MOV DATA_7SEG, A               ; DISPLAY NUMBER ON 7-SEGMENT
-
     ; CHECK IF VALUE IS NOT 0x90 (9)
     CJNE A, #0x90, RETURN
     ; RESET DPTR TO START OF MA7SEG AFTER REACHING 9
@@ -98,8 +97,6 @@ INT1_ISR:
     MOV A, R0
     MOV R1, A                     ; MOVE PREVIOUS R0 TO R1
     MOV R0, DATA_7SEG             ; STORE NEW NUMBER IN R0
-
-	
 	; DISPLAY NUMBER 0 ON 7-SEGMENT
     CLR A
     MOV DPTR, #MA7SEG             ; RESET DPTR TO START OF MA7SEG
@@ -107,13 +104,11 @@ INT1_ISR:
     MOV DATA_7SEG, A              ; DISPLAY NEXT VALUE ON 7-SEGMENT
 	ACALL CHECK_INDEX			  ; DISPLAY THE LED FOR SUBMITTED VALUE
 	CPL LED_RED                   ; Turn OFF LED connected to P2.6
-
     ; CHECK IF INDEX IS 6
     INC INDEX
     MOV A, INDEX
     CJNE A, #6, EXIT_1ISR              ; IF NOT, GO BACK TO LOOP
 	ACALL SEG_TO_ASCII
-
     ; TRANSMIT "****" AS STRING OVER UART
 	MOV A, R5                     ; SEND 1 OVER UART
     ACALL SEND_CHAR
@@ -131,8 +126,8 @@ INT1_ISR:
 	ACALL SEND_CHAR             ; Send CR via UART
 	MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
 	ACALL SEND_CHAR             ; Send LF via UART
-	
-	ACALL CHEKC_PASSWORD		; Check with out password
+	; Check with out password
+	ACALL CHEKC_PASSWORD		
 	EXIT_1ISR:
 	RETI                ; Return from interrupt
 	
