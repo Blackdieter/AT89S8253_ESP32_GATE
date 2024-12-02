@@ -28,10 +28,18 @@
 // Replace with your network credentials
 const char* ssid = "AnhKul3";
 const char* password = "0904155345";
+const char* serverName = "https://script.google.com/macros/s/AKfycbw9MkDpLxTC3sVBdq6LwLsUbzHiabf8s8dy2xl8tR7T-dMjlPYDP_WR3GeB_At-FXhG/exec"; // Replace with your Google Apps Script URL
+// Set your Static IP address 
+IPAddress local_IP(192, 168, 1, 184); 
+// Set your Gateway IP address 
+IPAddress gateway(192, 168, 1, 1); 
+IPAddress subnet(255, 255, 0, 0); 
+IPAddress primaryDNS(8, 8, 8, 8);   //optional 
+IPAddress secondaryDNS(8, 8, 4, 4); //optional
 
 // NTP Server
 const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = 0;
+const long  gmtOffset_sec = 25200; // +7 hour
 const int   daylightOffset_sec = 0;
 
 // Create AsyncWebServer object on port 80
@@ -51,8 +59,10 @@ const char* PARAM_INPUT_2 = "input2";
  
 //Variables to save values from HTML form 
 String input1; 
-String input2; 
- 
+String input2;
+#define NEW_PASSWORD input2
+#define USER_NAME input1
+String message; // The password MCS51 will send
 // File paths to save input values permanently 
 const char* input1Path = "/input1.txt"; 
 const char* input2Path = "/input2.txt"; 
@@ -100,9 +110,8 @@ void serialEvent() {
             // Check if the string starts with "s"
             if (rxBuffer[0] == 's') {
                 takeNewPhoto = true;
-                String message = String(rxBuffer).substring(1); // Extract the string after "s"
+                message = String(rxBuffer).substring(1); // Extract the string after "s"
                 Serial.println(message.c_str());
-                events.send(message.c_str(), "photo");
             }
         }
     }
@@ -133,7 +142,7 @@ void configInitCamera(){
 
   // Select lower framesize if the camera doesn't support PSRAM
   if(psramFound()){
-    config.frame_size = FRAMESIZE_UXGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
+    config.frame_size = FRAMESIZE_XGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
     config.jpeg_quality = 10; //0-63 lower number means higher quality
     config.fb_count = 1;
   } 
@@ -218,7 +227,7 @@ void takeSavePhoto(){
   // Path where new picture will be saved in SD Card
   getLocalTime(&timeinfo);
   strftime(now, 20, "%Y%m%d_%H%M%S", &timeinfo); // Format Date & Time
-  String path = "/photo_" + String(now) +".jpg";
+  String path = "/photo_" + String(now) + +"_" + message.c_str()+".jpg";
   lastPhoto = path;
   Serial.printf("Picture file name: %s\n", path.c_str());
   // Save picture to microSD card
@@ -285,6 +294,9 @@ void setup() {
   Serial.begin(115200);
   initSPIFFS();
   // Connect to Wi-Fi
+  if(!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) { 
+  Serial.println("STA Failed to configure"); 
+  } 
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
@@ -326,9 +338,9 @@ void setup() {
     String inputMessage;
     String inputParam;
     // GET input1 value on <ESP_IP>/view?photo=<inputMessage>
-    if (request->hasParam(PARAM_INPUT_1)) {
-      inputMessage = request->getParam(PARAM_INPUT_1)->value();
-      inputParam = PARAM_INPUT_1;
+    if (request->hasParam(PARAM_INPUT_PHOTO)) {
+      inputMessage = request->getParam(PARAM_INPUT_PHOTO)->value();
+      inputParam = PARAM_INPUT_PHOTO;
     }
     else {
       inputMessage = "No message sent";
@@ -372,19 +384,27 @@ void setup() {
       // HTTP POST input1 value 
       if (p->name() == PARAM_INPUT_1) { 
         input1 = p->value().c_str(); 
-        Serial.print("Input 1 set to: "); 
-        Serial.println(input1); 
+        Serial.print("The user is: "); 
+        Serial.println(USER_NAME);
         // Write file to save value 
         writeFile(SPIFFS, input1Path, input1.c_str()); 
-      } 
-      // HTTP POST input2 value 
+      }
       if (p->name() == PARAM_INPUT_2) { 
         input2 = p->value().c_str(); 
-        Serial.print("Input 2 set to: "); 
-        Serial.println(input2); 
+        Serial.print("Password Changed to: "); 
+        Serial.println("'"+ NEW_PASSWORD);
+        if(USER_NAME == "admin"){
+          Serial.println("Yes master, here you are!");
+          writeFile(SPIFFS, input2Path, input2.c_str());
+          input2 = "Changed";
+            // HTTP POST input2 value 
+        } else {
+          Serial.println("Try again!");
+          input2 = "Unchanged because you are not authorized";
+        } 
         // Write file to save value 
-        writeFile(SPIFFS, input2Path, input2.c_str()); 
-      } 
+         
+      }  
       //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str()); 
     } 
   } 
@@ -410,7 +430,8 @@ void setup() {
 void loop() {
   if (takeNewPhoto) { 
     takeSavePhoto();
-    events.send("new-photo", "photo"); 
+    events.send(message.c_str(), "photo");
+    message = "servercheck";
     takeNewPhoto = false; 
   } 
   delay(1);
