@@ -111,6 +111,7 @@ void serialEvent() {
             if (rxBuffer[0] == 's') {
                 takeNewPhoto = true;
                 message = String(rxBuffer).substring(1); // Extract the string after "s"
+                message.trim(); // Remove leading and trailing whitespace, including '\n'
                 Serial.println(message.c_str());
             }
         }
