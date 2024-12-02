@@ -32,17 +32,13 @@ html {
     font-weight: bold;
     color: #034078
   }
-  .state {
-    font-size: 1.2rem;
-    color:#1282A2;
-  }
   button {
     border: none;
     color: #FEFCFB;
     padding: 15px 15px;
     text-align: center;
     font-size: 14px;
-    width: 100px;
+    width: 150px;
     height: max-content;
     border-radius: 4px;
     transition-duration: 0.4s;
@@ -57,5 +53,11 @@ html {
     background-color:#858585;
   }
   .button-off:hover {
+    background-color: #252524;
+  }
+  .button-del {
+    background-color:#a11818;
+  }
+  .button-del:hover {
     background-color: #252524;
   }

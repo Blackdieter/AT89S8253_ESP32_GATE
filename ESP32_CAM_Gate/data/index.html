@@ -8,23 +8,32 @@
   </head> 
   <body> 
     <div class="topnav"> 
-      <h1>ESP WEB SERVER</h1> 
+      <h1>
+        Door Control System
+      </h1> 
     </div> 
     <div class="content"> 
         <div class="card-grid"> 
             <div class="card"> 
-                <p class="card-title"><i class="fas fa-lightbulb"></i>ESP32-CAM Last Photo</p> 
+                <p class="card-title"><i class="fas fa-lightbulb"></i>Controller</p> 
                 <p> 
-                    <h2>It might take more than 5 seconds to capture a photo.</h2>
+                    <p>It might take more than 5 seconds to capture a photo.</p>
                     <p>
-                        <button class="button-on" onclick="rotatePhoto();">ROTATE</button>
-                        <button class="button-on" onclick="capturePhoto()">CAPTURE PHOTO</button>
-                        <button class="button-off" onclick="location.reload();">REFRESH PAGE</button>
+                      <button class="button-on" onclick="rotatePhoto();">Rotate</button>
+                      <button class="button-on" onclick="capturePhoto()">Capture Photo</button>
+                    </p>
+                    <p></p>
+                    <button class="button-off" onclick="location.reload();">Refresh Page</button>
+                    <button class="button-del" onclick="window.open('/list','_blank')">View & Delete</button>
                     </p> 
-                </p> 
-                <div><img src="saved-photo" id="photo" width="70%"></div>
-            </div> 
+                </p>
+              </div>
+              <div class="card">
+                <p class="card-title">Last Photo</p>
+                <p><img src="/saved-photo" id="photo" alt="Image not found: failed to open image, image deleted or no microSD card inserted. Try refresh the page or restart your board."></p> 
+              </div> 
         </div> 
-    </div> 
+    </div>
+    <script src="script.js"></script>  
   </body> 
 </html> 

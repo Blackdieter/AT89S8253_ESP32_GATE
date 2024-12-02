@@ -20,6 +20,7 @@
 #include "SD_MMC.h"            // SD Card ESP32
 #include "time.h"
 #include <WiFiUdp.h>
+#include "SPIFFS.h"
 
 // Replace with your network credentials
 const char* ssid = "AnhKul3";
@@ -64,49 +65,6 @@ const char* PARAM_INPUT_1 = "photo";
 camera_config_t config;
 
 File root;
-
-const char index_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE HTML><html>
-<head>
-  <title>ESP32-CAM SD Card Photo Manager</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { text-align:center; }
-    .vert { margin-bottom: 25%; }
-    .hori{ margin-bottom: 0%; }
-    img { height:auto; width:100%; }
-  </style>
-</head>
-<body>
-  <div id="container">
-    <h1>ESP32-CAM SD Card Photo Manager</h1>
-    <p>It might take more than 5 seconds to capture a photo.</p>
-    <p>
-      <button onclick="rotatePhoto();">ROTATE</button>
-      <button onclick="capturePhoto()">CAPTURE PHOTO</button>
-      <button onclick="location.reload();">REFRESH PAGE</button>
-      <button onclick="window.open('/list','_blank')">VIEW AND DELETE PHOTOS</button>
-    </p>
-  </div>
-  <img src="/saved-photo" id="photo" alt="Image not found: failed to open image, image deleted or no microSD card inserted. Try refresh the page or restart your board.">
-</body>
-<script>
-  var deg = 0;
-  function capturePhoto(){
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', "/capture", true);
-    xhr.send();
-  }
-  function rotatePhoto(){
-    var img = document.getElementById("photo");
-    deg += 90;
-    if(isOdd(deg/90)){ document.getElementById("container").className = "vert"; }
-    else{document.getElementById("container").className = "hori";}
-    img.style.transform = "rotate(" + deg + "deg)";
-  }
-  function isOdd(n){return Math.abs(n % 2)==1;}
-</script>
-</html>)rawliteral";
 
 void configInitCamera(){
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -198,7 +156,7 @@ void listDirectory(fs::FS &fs) {
   }
 }
 
-void takeSavePhoto(){
+bool takeSavePhoto(){
   struct tm timeinfo;
   char now[20];
   
@@ -234,6 +192,7 @@ void takeSavePhoto(){
   }
   file.close();
   esp_camera_fb_return(fb); 
+  return true;
 }
 
 void deleteFile(fs::FS &fs, const char * path){
@@ -247,13 +206,22 @@ void deleteFile(fs::FS &fs, const char * path){
   }
 }
 
+void initSPIFFS() {
+  if (!SPIFFS.begin(true)) {
+    Serial.println("An error has occurred while mounting SPIFFS");
+  }
+  else {
+    Serial.println("SPIFFS mounted successfully");
+  }
+}
+
 void setup() {
   // Turn-off the brownout detector
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
   
   // Serial port for debugging purposes
   Serial.begin(115200);
-
+  initSPIFFS();
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -272,14 +240,21 @@ void setup() {
   
   Serial.println("Initializing the MicroSD card module... ");
   initMicroSDCard();
-  
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
-    request->send_P(200, "text/html", index_html);
-  });
+
+  server.serveStatic("/", SPIFFS, "/");
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){ 
+    request->send(SPIFFS, "/index.html", "text/html", false); 
+  }); 
 
   server.on("/capture", HTTP_GET, [](AsyncWebServerRequest * request) {
-    takeNewPhoto = true;
-    request->send_P(200, "text/plain", "Taking Photo");
+    bool success =takeSavePhoto();
+    if (success){
+      request->send_P(200, "text/plain", "Photo Taken");
+    }
+    else {
+      request->send_P(500, "text/plain", "Failed to Take Photo");
+    }
   });
 
   server.on("/saved-photo", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -333,9 +308,4 @@ void setup() {
 }
 
 void loop() {
-  if (takeNewPhoto) {
-    takeSavePhoto();
-    takeNewPhoto = false;
-  }
-  delay(1);
 }
