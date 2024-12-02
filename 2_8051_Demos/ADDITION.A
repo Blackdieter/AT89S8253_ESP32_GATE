@@ -1,5 +1,0 @@
-	ORG 000H
-		MOV A, #46H
-		ADD A, #23H
-		MOV 30H, A
-END

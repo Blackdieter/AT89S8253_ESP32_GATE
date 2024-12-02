@@ -1,3 +1,0 @@
-".\Objects\UART_RECEIVE_AND_SEND.obj" 
-TO ".\Objects\DEMO" 
-PRINT(".\Listings\DEMO.m51")
