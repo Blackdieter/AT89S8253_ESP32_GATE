@@ -6,20 +6,48 @@
   The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 *********/
 
+#include "WiFi.h"
 #include "esp_camera.h"
-#include "FS.h"                // SD Card ESP32
-#include "SD_MMC.h"            // SD Card ESP32
+#include "esp_timer.h"
+#include "img_converters.h"
+#include "Arduino.h"
 #include "soc/soc.h"           // Disable brownout problems
 #include "soc/rtc_cntl_reg.h"  // Disable brownout problems
 #include "driver/rtc_io.h"
+#include <ESPAsyncWebServer.h>
+#include <StringArray.h>
+#include "FS.h"                // SD Card ESP32
+#include "SD_MMC.h"            // SD Card ESP32
+#include "time.h"
+#include <WiFiUdp.h>
 
-// Pin definition for CAMERA_MODEL_AI_THINKER
-// Change pin definition if you're using another ESP32 with camera module
+// Replace with your network credentials
+const char* ssid = "AnhKul3";
+const char* password = "0904155345";
+
+// NTP Server
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 0;
+const int   daylightOffset_sec = 0;
+
+// Create AsyncWebServer object on port 80
+AsyncWebServer server(80);
+
+boolean takeNewPhoto = false;
+
+String lastPhoto = "";
+String list = "";
+
+// HTTP GET parameter
+const char* PARAM_INPUT_1 = "photo";
+
+// OV2640 camera module pins (CAMERA_MODEL_AI_THINKER)
 #define PWDN_GPIO_NUM     32
 #define RESET_GPIO_NUM    -1
 #define XCLK_GPIO_NUM      0
 #define SIOD_GPIO_NUM     26
 #define SIOC_GPIO_NUM     27
+
 #define Y9_GPIO_NUM       35
 #define Y8_GPIO_NUM       34
 #define Y7_GPIO_NUM       39
@@ -32,11 +60,53 @@
 #define HREF_GPIO_NUM     23
 #define PCLK_GPIO_NUM     22
 
-// Keep track of number of pictures
-unsigned int pictureNumber = 0;
-
 // Stores the camera configuration parameters
 camera_config_t config;
+
+File root;
+
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html>
+<head>
+  <title>ESP32-CAM SD Card Photo Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { text-align:center; }
+    .vert { margin-bottom: 25%; }
+    .hori{ margin-bottom: 0%; }
+    img { height:auto; width:100%; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>ESP32-CAM SD Card Photo Manager</h1>
+    <p>It might take more than 5 seconds to capture a photo.</p>
+    <p>
+      <button onclick="rotatePhoto();">ROTATE</button>
+      <button onclick="capturePhoto()">CAPTURE PHOTO</button>
+      <button onclick="location.reload();">REFRESH PAGE</button>
+      <button onclick="window.open('/list','_blank')">VIEW AND DELETE PHOTOS</button>
+    </p>
+  </div>
+  <img src="/saved-photo" id="photo" alt="Image not found: failed to open image, image deleted or no microSD card inserted. Try refresh the page or restart your board.">
+</body>
+<script>
+  var deg = 0;
+  function capturePhoto(){
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', "/capture", true);
+    xhr.send();
+  }
+  function rotatePhoto(){
+    var img = document.getElementById("photo");
+    deg += 90;
+    if(isOdd(deg/90)){ document.getElementById("container").className = "vert"; }
+    else{document.getElementById("container").className = "hori";}
+    img.style.transform = "rotate(" + deg + "deg)";
+  }
+  function isOdd(n){return Math.abs(n % 2)==1;}
+</script>
+</html>)rawliteral";
 
 void configInitCamera(){
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -59,18 +129,18 @@ void configInitCamera(){
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG; //YUV422,GRAYSCALE,RGB565,JPEG
+  config.grab_mode = CAMERA_GRAB_LATEST;
 
   // Select lower framesize if the camera doesn't support PSRAM
   if(psramFound()){
     config.frame_size = FRAMESIZE_UXGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
     config.jpeg_quality = 10; //0-63 lower number means higher quality
-    config.fb_count = 2;
-    Serial.println("PRAM found");
-  } else {
+    config.fb_count = 1;
+  } 
+  else {
     config.frame_size = FRAMESIZE_SVGA;
     config.jpeg_quality = 12;
     config.fb_count = 1;
-    Serial.println("PSRAM not found.");
   }
   
   // Initialize the Camera
@@ -95,51 +165,177 @@ void initMicroSDCard(){
   }
 }
 
-void takeSavePhoto(String path){
-  // Take Picture with Camera
-  camera_fb_t  * fb = esp_camera_fb_get();  
-  if(!fb) {
-    Serial.println("Camera capture failed");
+void listDirectory(fs::FS &fs) {
+  File root = fs.open("/");
+  list = "";
+  if(!root){
+    Serial.println("Failed to open directory");
+    return;
+  }
+  if(!root.isDirectory()){
+    Serial.println("Not a directory");
     return;
   }
 
+  File file = root.openNextFile();
+  while(file){
+    if(!file.isDirectory()){
+      String filename=String(file.name());
+      filename.toLowerCase();
+      if (filename.indexOf(".jpg")!=-1){
+        list = "<tr><td><button onclick=\"window.open('/view?photo="+String(file.name())+"','_blank')\">View</button></td><td><button onclick=\"window.location.href='/delete?photo="+String(file.name())+"'\">Delete</button></td><td>"+String(file.name())+"</td><td></td></tr>"+list;
+      }
+    }
+    lastPhoto = file.name();
+    file = root.openNextFile();
+  }
+  
+  if (list=="") {
+    list="<tr>No photos Stored</tr>";
+  }
+  else {
+    list="<h1>ESP32-CAM View and Delete Photos</h1><p><a href=\"/\">Return to Home Page</a></p><table><th colspan=\"2\">Actions</th><th>Filename</th>"+list+"</table>";
+  }
+}
+
+void takeSavePhoto(){
+  struct tm timeinfo;
+  char now[20];
+  
+  // Clean previous buffer
+  camera_fb_t * fb = NULL;
+  fb = esp_camera_fb_get();
+  esp_camera_fb_return(fb); // dispose the buffered image
+  fb = NULL; // reset to capture errors
+  // Get fresh image
+  fb = esp_camera_fb_get(); 
+  if(!fb) {
+    Serial.println("Camera capture failed");
+    delay(1000);
+    ESP.restart();
+  }
+    
+  // Path where new picture will be saved in SD Card
+  getLocalTime(&timeinfo);
+  strftime(now, 20, "%Y%m%d_%H%M%S", &timeinfo); // Format Date & Time
+  String path = "/photo_" + String(now) +".jpg";
+  lastPhoto = path;
+  Serial.printf("Picture file name: %s\n", path.c_str());
   // Save picture to microSD card
   fs::FS &fs = SD_MMC; 
-  File file = fs.open(path.c_str(), FILE_WRITE);
+  File file = fs.open(path.c_str(),FILE_WRITE);
   if(!file){
-    Serial.println("Failed to open file in writing mode");
+    Serial.printf("Failed to open file in writing mode");
   } 
   else {
     file.write(fb->buf, fb->len); // payload (image), payload length
-    Serial.printf("Saved file to path: %s\n", path.c_str());
+    Serial.printf(" Saved: %s\n", path.c_str());
+    listDirectory(SD_MMC);
   }
   file.close();
-  
-  //return the frame buffer back to the driver for reuse
   esp_camera_fb_return(fb); 
 }
 
-void setup() {
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
- 
-  Serial.begin(115200);
-  
-  // Initialize the camera  
-  Serial.print("Initializing the camera module...");
-  configInitCamera();
-  Serial.println("Ok!");
- 
-  // Initialize MicroSD
-  Serial.print("Initializing the MicroSD card module... ");
-  initMicroSDCard();
+void deleteFile(fs::FS &fs, const char * path){
+  Serial.printf("Deleting file: %s\n", path);
+  if(fs.remove(path)){  
+    Serial.println("File deleted");
+    listDirectory(SD_MMC);
+  } 
+  else {
+    Serial.println("Delete failed");
+  }
 }
-void loop() {
-  // Path where new picture will be saved in SD Card
-  String path = "/picture" + String(pictureNumber) +".jpg";  
-  Serial.printf("Picture file name: %s\n", path.c_str());
 
-  // Take and Save Photo
-  takeSavePhoto(path);
-  pictureNumber++;
-  delay(5000); 
+void setup() {
+  // Turn-off the brownout detector
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+  
+  // Serial port for debugging purposes
+  Serial.begin(115200);
+
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+
+  // Print ESP32 Local IP Address
+  Serial.print("IP Address: http://");
+  Serial.println(WiFi.localIP());
+
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  
+  Serial.println("Initializing the camera module...");
+  configInitCamera();
+  
+  Serial.println("Initializing the MicroSD card module... ");
+  initMicroSDCard();
+  
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
+    request->send_P(200, "text/html", index_html);
+  });
+
+  server.on("/capture", HTTP_GET, [](AsyncWebServerRequest * request) {
+    takeNewPhoto = true;
+    request->send_P(200, "text/plain", "Taking Photo");
+  });
+
+  server.on("/saved-photo", HTTP_GET, [](AsyncWebServerRequest * request) {
+    request->send(SD_MMC, "/" + lastPhoto, "image/jpg", false);
+  });
+  
+  server.on("/list", HTTP_GET, [](AsyncWebServerRequest * request) {
+    request->send_P(200, "text/html", list.c_str());
+  });
+  
+  server.on("/view", HTTP_GET, [](AsyncWebServerRequest * request) {
+    String inputMessage;
+    String inputParam;
+    // GET input1 value on <ESP_IP>/view?photo=<inputMessage>
+    if (request->hasParam(PARAM_INPUT_1)) {
+      inputMessage = request->getParam(PARAM_INPUT_1)->value();
+      inputParam = PARAM_INPUT_1;
+    }
+    else {
+      inputMessage = "No message sent";
+      inputParam = "none";
+    }
+    Serial.println(inputMessage);
+    request->send(SD_MMC, "/" + inputMessage, "image/jpg", false);
+  });
+  
+  // Send a GET request to <ESP_IP>/delete?photo=<inputMessage>
+  server.on("/delete", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    String inputMessage;
+    String inputParam;
+    // GET input1 value on <ESP_IP>/delete?photo=<inputMessage>
+    if (request->hasParam(PARAM_INPUT_1)) {
+      inputMessage = request->getParam(PARAM_INPUT_1)->value();
+      inputParam = PARAM_INPUT_1;
+    }
+    else {
+      inputMessage = "No message sent";
+      inputParam = "none";
+    }
+    String deleteFilePath = "/" + inputMessage;
+    Serial.println(deleteFilePath);
+    deleteFile(SD_MMC, deleteFilePath.c_str());
+    request->send(200, "text/html", "Done. Your photo named " + deleteFilePath + " was removed." +
+                                     "<br><a href=\"/\">Return to Home Page</a> or <a href=\"/list\">view/delete other photos</a>.");
+  });
+  // Start server
+  server.begin();
+  
+  root = SD_MMC.open("/");
+  listDirectory(SD_MMC);
+}
+
+void loop() {
+  if (takeNewPhoto) {
+    takeSavePhoto();
+    takeNewPhoto = false;
+  }
+  delay(1);
 }

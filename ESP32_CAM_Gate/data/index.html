@@ -1,0 +1,30 @@
+<!DOCTYPE html> 
+<html> 
+  <head> 
+    <title>ESP IOT DASHBOARD</title> 
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <link rel="stylesheet" type="text/css" href="style.css"> 
+    <link rel="icon" type="image/png" href="favicon.png"> 
+  </head> 
+  <body> 
+    <div class="topnav"> 
+      <h1>ESP WEB SERVER</h1> 
+    </div> 
+    <div class="content"> 
+        <div class="card-grid"> 
+            <div class="card"> 
+                <p class="card-title"><i class="fas fa-lightbulb"></i>ESP32-CAM Last Photo</p> 
+                <p> 
+                    <h2>It might take more than 5 seconds to capture a photo.</h2>
+                    <p>
+                        <button class="button-on" onclick="rotatePhoto();">ROTATE</button>
+                        <button class="button-on" onclick="capturePhoto()">CAPTURE PHOTO</button>
+                        <button class="button-off" onclick="location.reload();">REFRESH PAGE</button>
+                    </p> 
+                </p> 
+                <div><img src="saved-photo" id="photo" width="70%"></div>
+            </div> 
+        </div> 
+    </div> 
+  </body> 
+</html> 
