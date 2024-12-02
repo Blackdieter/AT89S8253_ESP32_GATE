@@ -21,6 +21,9 @@
 #include "time.h"
 #include <WiFiUdp.h>
 #include "SPIFFS.h"
+#include <Arduino_JSON.h> 
+
+#define RX_BUFFER_SIZE 128
 
 // Replace with your network credentials
 const char* ssid = "AnhKul3";
@@ -33,6 +36,7 @@ const int   daylightOffset_sec = 0;
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
+AsyncEventSource events("/events");
 
 boolean takeNewPhoto = false;
 
@@ -40,7 +44,20 @@ String lastPhoto = "";
 String list = "";
 
 // HTTP GET parameter
-const char* PARAM_INPUT_1 = "photo";
+const char* PARAM_INPUT_PHOTO = "photo";
+// Search for parameter in HTTP POST request 
+const char* PARAM_INPUT_1 = "input1"; 
+const char* PARAM_INPUT_2 = "input2"; 
+ 
+//Variables to save values from HTML form 
+String input1; 
+String input2; 
+ 
+// File paths to save input values permanently 
+const char* input1Path = "/input1.txt"; 
+const char* input2Path = "/input2.txt"; 
+ 
+JSONVar values; 
 
 // OV2640 camera module pins (CAMERA_MODEL_AI_THINKER)
 #define PWDN_GPIO_NUM     32
@@ -65,6 +82,31 @@ const char* PARAM_INPUT_1 = "photo";
 camera_config_t config;
 
 File root;
+void serialEvent() {
+    static char rxBuffer[RX_BUFFER_SIZE];
+    static size_t index = 0;
+
+    while (Serial.available()) {
+        char receivedChar = Serial.read();
+
+        if (index < RX_BUFFER_SIZE - 1) {
+            rxBuffer[index++] = receivedChar;
+        }
+
+        if (receivedChar == '\n') { // End of line indicates a full command
+            rxBuffer[index] = '\0'; // Null-terminate the string
+            index = 0; // Reset the buffer index
+
+            // Check if the string starts with "s"
+            if (rxBuffer[0] == 's') {
+                takeNewPhoto = true;
+                String message = String(rxBuffer).substring(1); // Extract the string after "s"
+                Serial.println(message.c_str());
+                events.send(message.c_str(), "photo");
+            }
+        }
+    }
+}
 
 void configInitCamera(){
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -156,7 +198,7 @@ void listDirectory(fs::FS &fs) {
   }
 }
 
-bool takeSavePhoto(){
+void takeSavePhoto(){
   struct tm timeinfo;
   char now[20];
   
@@ -192,7 +234,6 @@ bool takeSavePhoto(){
   }
   file.close();
   esp_camera_fb_return(fb); 
-  return true;
 }
 
 void deleteFile(fs::FS &fs, const char * path){
@@ -215,6 +256,27 @@ void initSPIFFS() {
   }
 }
 
+// Write file to SPIFFS 
+void writeFile(fs::FS &fs, const char * path, const char * message){ 
+  Serial.printf("Writing file: %s\r\n", path); 
+ 
+  File file = fs.open(path, FILE_WRITE); 
+  if(!file){ 
+    Serial.println("- failed to open file for writing"); 
+    return; 
+  } 
+  if(file.print(message)){ 
+    Serial.println("- file written"); 
+  } else { 
+    Serial.println("- frite failed"); 
+  }
+}
+String getCurrentInputValues(){ 
+  values["textValue"] = input1; 
+  values["numberValue"] = input2; 
+  String jsonString = JSON.stringify(values); 
+  return jsonString; 
+} 
 void setup() {
   // Turn-off the brownout detector
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
@@ -248,13 +310,8 @@ void setup() {
   }); 
 
   server.on("/capture", HTTP_GET, [](AsyncWebServerRequest * request) {
-    bool success =takeSavePhoto();
-    if (success){
-      request->send_P(200, "text/plain", "Photo Taken");
-    }
-    else {
-      request->send_P(500, "text/plain", "Failed to Take Photo");
-    }
+    takeNewPhoto = true; 
+    request->send_P(200, "text/plain", "Taking Photo");
   });
 
   server.on("/saved-photo", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -286,8 +343,8 @@ void setup() {
     String inputMessage;
     String inputParam;
     // GET input1 value on <ESP_IP>/delete?photo=<inputMessage>
-    if (request->hasParam(PARAM_INPUT_1)) {
-      inputMessage = request->getParam(PARAM_INPUT_1)->value();
+    if (request->hasParam(PARAM_INPUT_PHOTO)) {
+      inputMessage = request->getParam(PARAM_INPUT_PHOTO)->value();
       inputParam = PARAM_INPUT_1;
     }
     else {
@@ -300,6 +357,49 @@ void setup() {
     request->send(200, "text/html", "Done. Your photo named " + deleteFilePath + " was removed." +
                                      "<br><a href=\"/\">Return to Home Page</a> or <a href=\"/list\">view/delete other photos</a>.");
   });
+  
+  server.on("/values", HTTP_GET, [](AsyncWebServerRequest *request){ 
+    String json = getCurrentInputValues(); 
+    request->send(200, "application/json", json); 
+    json = String(); 
+  }); 
+
+  server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) { 
+  int params = request->params(); 
+  for(int i=0;i<params;i++){ 
+    AsyncWebParameter* p = request->getParam(i); 
+    if(p->isPost()){ 
+      // HTTP POST input1 value 
+      if (p->name() == PARAM_INPUT_1) { 
+        input1 = p->value().c_str(); 
+        Serial.print("Input 1 set to: "); 
+        Serial.println(input1); 
+        // Write file to save value 
+        writeFile(SPIFFS, input1Path, input1.c_str()); 
+      } 
+      // HTTP POST input2 value 
+      if (p->name() == PARAM_INPUT_2) { 
+        input2 = p->value().c_str(); 
+        Serial.print("Input 2 set to: "); 
+        Serial.println(input2); 
+        // Write file to save value 
+        writeFile(SPIFFS, input2Path, input2.c_str()); 
+      } 
+      //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str()); 
+    } 
+  } 
+  request->send(SPIFFS, "/index.html", "text/html"); 
+}); 
+
+  events.onConnect([](AsyncEventSourceClient *client){ 
+    if(client->lastId()){ 
+      Serial.printf("Client reconnected! Last message ID that it got is: %u\n", client->lastId()); 
+    } 
+    // send event with message "hello!", id current millis 
+    // and set reconnect delay to 1 second 
+    client->send("hello!", NULL, millis(), 10000); 
+  }); 
+  server.addHandler(&events);
   // Start server
   server.begin();
   
@@ -308,4 +408,10 @@ void setup() {
 }
 
 void loop() {
+  if (takeNewPhoto) { 
+    takeSavePhoto();
+    events.send("new-photo", "photo"); 
+    takeNewPhoto = false; 
+  } 
+  delay(1);
 }
