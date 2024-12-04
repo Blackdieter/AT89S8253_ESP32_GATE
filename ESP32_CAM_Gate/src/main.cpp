@@ -21,14 +21,17 @@
 #include "time.h"
 #include <WiFiUdp.h>
 #include "SPIFFS.h"
+#include "base64.h"
 #include <Arduino_JSON.h> 
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 
 #define RX_BUFFER_SIZE 128
 
 // Replace with your network credentials
 const char* ssid = "AnhKul3";
 const char* password = "0904155345";
-const char* serverName = "https://script.google.com/macros/s/AKfycbw9MkDpLxTC3sVBdq6LwLsUbzHiabf8s8dy2xl8tR7T-dMjlPYDP_WR3GeB_At-FXhG/exec"; // Replace with your Google Apps Script URL
+const char *webAppUrl = "https://script.google.com/macros/s/AKfycbwj80c6y4c6AFBSVYJ0apv5K--mqbFIDze973GA-V3Lhvadi3bL3peg8ujikoQcYfBX/exec";
 // Set your Static IP address 
 IPAddress local_IP(192, 168, 1, 184); 
 // Set your Gateway IP address 
@@ -47,10 +50,12 @@ AsyncWebServer server(80);
 AsyncEventSource events("/events");
 
 boolean takeNewPhoto = false;
+boolean uploadNewPhoto = false;
+boolean uploadAllPhoto = false;
 
 String lastPhoto = "";
 String list = "";
-
+String uploadFilePath;
 // HTTP GET parameter
 const char* PARAM_INPUT_PHOTO = "photo";
 // Search for parameter in HTTP POST request 
@@ -62,7 +67,7 @@ String input1;
 String input2;
 #define NEW_PASSWORD input2
 #define USER_NAME input1
-String message; // The password MCS51 will send
+String message = "servercheck"; // The password MCS51 will send
 // File paths to save input values permanently 
 const char* input1Path = "/input1.txt"; 
 const char* input2Path = "/input2.txt"; 
@@ -178,33 +183,36 @@ void initMicroSDCard(){
 void listDirectory(fs::FS &fs) {
   File root = fs.open("/");
   list = "";
-  if(!root){
+  if (!root) {
     Serial.println("Failed to open directory");
     return;
   }
-  if(!root.isDirectory()){
+  if (!root.isDirectory()) {
     Serial.println("Not a directory");
     return;
   }
 
   File file = root.openNextFile();
-  while(file){
-    if(!file.isDirectory()){
-      String filename=String(file.name());
+  while (file) {
+    if (!file.isDirectory()) {
+      String filename = String(file.name());
       filename.toLowerCase();
-      if (filename.indexOf(".jpg")!=-1){
-        list = "<tr><td><button onclick=\"window.open('/view?photo="+String(file.name())+"','_blank')\">View</button></td><td><button onclick=\"window.location.href='/delete?photo="+String(file.name())+"'\">Delete</button></td><td>"+String(file.name())+"</td><td></td></tr>"+list;
+      if (filename.indexOf(".jpg") != -1) {
+        // Add "Upload" button for each image
+        list = "<tr><td><button onclick=\"window.open('/view?photo=" + String(file.name()) + "','_blank')\">View</button></td>" +
+               "<td><button onclick=\"window.location.href='/delete?photo=" + String(file.name()) + "'\">Delete</button></td>" +
+               "<td>" + String(file.name()) + "</td></tr>" + list;
       }
     }
     lastPhoto = file.name();
     file = root.openNextFile();
   }
-  
-  if (list=="") {
-    list="<tr>No photos Stored</tr>";
-  }
-  else {
-    list="<h1>ESP32-CAM View and Delete Photos</h1><p><a href=\"/\">Return to Home Page</a></p><table><th colspan=\"2\">Actions</th><th>Filename</th>"+list+"</table>";
+
+  if (list == "") {
+    list = "<tr>No photos Stored</tr>";
+  } else {
+    // Add "Upload All" button
+    list = "<h1>ESP32-CAM View, Delete, and Upload Photos</h1><p><a href=\"/\">Return to Home Page</a></p><button onclick=\"window.location.href='/uploadAll'\">Upload All</button><table><th>View</th><th>Delete</th><th>Upload</th><th>Filename</th>" + list + "</table>";
   }
 }
 
@@ -281,12 +289,90 @@ void writeFile(fs::FS &fs, const char * path, const char * message){
     Serial.println("- frite failed"); 
   }
 }
+// Function to send a single image to Google Drive
+void sendImageToGoogleDrive(File &file, String filename) {
+  if (!file) {
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+
+  // Create a secure connection
+  WiFiClientSecure client;
+  client.setInsecure(); // Disable certificate verification (use only for testing)
+  HTTPClient http;
+
+  // Create the full URL for the request
+  String url = String(webAppUrl);
+
+  // Prepare the HTTP request
+  http.begin(client, url);
+  http.addHeader("Content-Type", "application/json");
+
+  // Read file contents into a buffer
+  size_t fileSize = file.size();
+  uint8_t *fileBuffer = new uint8_t[fileSize];
+  file.read(fileBuffer, fileSize);
+
+  // Convert file data to Base64
+  String encodedData = base64::encode(fileBuffer, fileSize);
+
+  // Prepare JSON payload
+  String payload = "{";
+  payload += "\"filename\":\"" + filename + "\",";
+  payload += "\"data\":\"" + encodedData + "\"";
+  payload += "}";
+
+  // Send the HTTP POST request
+  int httpResponseCode = http.POST(payload);
+
+  // Handle the response
+  if (httpResponseCode > 0) {
+    Serial.printf("HTTP Response code: %d\n", httpResponseCode);
+    Serial.println(http.getString());
+  } else {
+    Serial.printf("Error in sending POST: %s\n", http.errorToString(httpResponseCode).c_str());
+  }
+
+  // Clean up
+  http.end();
+  delete[] fileBuffer;
+  file.close();
+}
+void uploadImagesToGoogleDrive() {
+  fs::FS &fs = SD_MMC;
+  File root = fs.open("/");
+  if (!root) {
+    Serial.println("Failed to open directory");
+    return;
+  }
+  if (!root.isDirectory()) {
+    Serial.println("Not a directory");
+    return;
+  }
+
+  File file = root.openNextFile();
+  while (file) {
+    if (!file.isDirectory()) {
+      String filename = String(file.name());
+      filename.toLowerCase();
+      if (filename.indexOf(".jpg") != -1) {
+        Serial.println("Uploading: " + filename);
+        sendImageToGoogleDrive(file, filename);
+      }
+    }
+    file = root.openNextFile();
+  }
+  Serial.println("All images uploaded.");
+}
+
+
 String getCurrentInputValues(){ 
   values["textValue"] = input1; 
   values["numberValue"] = input2; 
   String jsonString = JSON.stringify(values); 
   return jsonString; 
 } 
+
 void setup() {
   // Turn-off the brownout detector
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
@@ -315,7 +401,6 @@ void setup() {
   
   Serial.println("Initializing the MicroSD card module... ");
   initMicroSDCard();
-
   server.serveStatic("/", SPIFFS, "/");
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){ 
@@ -377,40 +462,45 @@ void setup() {
     json = String(); 
   }); 
 
+  server.on("/uploadAll", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    uploadAllPhoto = true;
+    request->send(200, "text/html", "Uploading photos to Google Drive.<br><a href=\"/\">Return to Home Page</a> or <a href=\"/list\">view/upload other photos</a>.");
+  });
+
   server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) { 
-  int params = request->params(); 
-  for(int i=0;i<params;i++){ 
-    AsyncWebParameter* p = request->getParam(i); 
-    if(p->isPost()){ 
-      // HTTP POST input1 value 
-      if (p->name() == PARAM_INPUT_1) { 
-        input1 = p->value().c_str(); 
-        Serial.print("The user is: "); 
-        Serial.println(USER_NAME);
-        // Write file to save value 
-        writeFile(SPIFFS, input1Path, input1.c_str()); 
-      }
-      if (p->name() == PARAM_INPUT_2) { 
-        input2 = p->value().c_str(); 
-        Serial.print("Password Changed to: "); 
-        Serial.println("'"+ NEW_PASSWORD);
-        if(USER_NAME == "admin"){
-          Serial.println("Yes master, here you are!");
-          writeFile(SPIFFS, input2Path, input2.c_str());
-          input2 = "Changed";
-            // HTTP POST input2 value 
-        } else {
-          Serial.println("Try again!");
-          input2 = "Unchanged because you are not authorized";
-        } 
-        // Write file to save value 
-         
-      }  
-      //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str()); 
+    int params = request->params(); 
+    for(int i=0;i<params;i++){ 
+      AsyncWebParameter* p = request->getParam(i); 
+      if(p->isPost()){ 
+        // HTTP POST input1 value 
+        if (p->name() == PARAM_INPUT_1) { 
+          input1 = p->value().c_str(); 
+          Serial.print("The user is: "); 
+          Serial.println(USER_NAME);
+          // Write file to save value 
+          writeFile(SPIFFS, input1Path, input1.c_str()); 
+        }
+        if (p->name() == PARAM_INPUT_2) { 
+          input2 = p->value().c_str(); 
+          Serial.print("Password Changed to: "); 
+          Serial.println("'"+ NEW_PASSWORD);
+          if(USER_NAME == "admin"){
+            Serial.println("Yes master, here you are!");
+            writeFile(SPIFFS, input2Path, input2.c_str());
+            input2 = "Changed";
+              // HTTP POST input2 value 
+          } else {
+            Serial.println("Try again!");
+            input2 = "Unchanged because you are not authorized";
+          } 
+          // Write file to save value 
+          
+        }  
+        //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str()); 
+      } 
     } 
-  } 
-  request->send(SPIFFS, "/index.html", "text/html"); 
-}); 
+    request->send(SPIFFS, "/index.html", "text/html"); 
+  }); 
 
   events.onConnect([](AsyncEventSourceClient *client){ 
     if(client->lastId()){ 
@@ -426,6 +516,7 @@ void setup() {
   
   root = SD_MMC.open("/");
   listDirectory(SD_MMC);
+
 }
 
 void loop() {
@@ -434,6 +525,10 @@ void loop() {
     events.send(message.c_str(), "photo");
     message = "servercheck";
     takeNewPhoto = false; 
+  }
+  if (uploadAllPhoto){
+    uploadImagesToGoogleDrive();
+    uploadAllPhoto = false;
   } 
   delay(1);
 }
