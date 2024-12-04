@@ -43,16 +43,16 @@ html {
     border-radius: 4px;
     transition-duration: 0.4s;
   }
-  .button-on {
+  .button-cap {
     background-color:#034078;
   }
-  .button-on:hover {
+  .button-cap:hover {
     background-color: #1282A2;
   }
-  .button-off {
+  .button-re {
     background-color:#858585;
   }
-  .button-off:hover {
+  .button-re:hover {
     background-color: #252524;
   }
   .button-del {

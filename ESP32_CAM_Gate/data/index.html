@@ -19,11 +19,11 @@
                 <p> 
                     <em>It might take more than 5 seconds to capture a photo.</em>
                     <p>
-                      <button class="button-on" onclick="rotatePhoto();">Rotate</button>
-                      <button class="button-on" onclick="capturePhoto()">Capture Photo</button>
+                      <button class="button-cap" onclick="rotatePhoto();">Rotate</button>
+                      <button class="button-cap" onclick="capturePhoto()">Capture Photo</button>
                     </p>
                     <p></p>
-                    <button class="button-off" onclick="location.reload();">Refresh Page</button>
+                    <button class="button-re" onclick="location.reload();">Refresh Page</button>
                     <button class="button-del" onclick="window.open('/list','_blank')">View & Delete</button>
                     </p> 
                 </p>
@@ -32,6 +32,9 @@
                 <p class="card-title">Last Photo</p>
                 <p><div id="password"></div></p>
                 <p><img src="/saved-photo" id="photo" class="photo-size" alt="Image not found: failed to open image, image deleted or no microSD card inserted. Try refresh the page or restart your board."></p> 
+                <p class="card-title">Log status</p> 
+                <p class="value">Current user: <span id="textFieldValue"></span></p> 
+                <p class="value">Current password: <span id="numberFieldValue"></span></p> 
               </div>
               <div class="card"> 
                 <form action="/" method="POST"> 
@@ -50,11 +53,6 @@
                   </p> 
                 </form> 
               </div>     
-              <div class="card"> 
-                <p class="card-title">Log State</p> 
-                <p class="value">Current user: <span id="textFieldValue"></span></p> 
-                <p class="value">Current password: <span id="numberFieldValue"></span></p> 
-              </div> 
         </div> 
     </div>
     <script src="script.js"></script>  
