@@ -212,7 +212,7 @@ void listDirectory(fs::FS &fs) {
     list = "<tr>No photos Stored</tr>";
   } else {
     // Add "Upload All" button
-    list = "<h1>ESP32-CAM View, Delete, and Upload Photos</h1><p><a href=\"/\">Return to Home Page</a></p><button onclick=\"window.location.href='/uploadAll'\">Upload All</button><table><th>View</th><th>Delete</th><th>Upload</th><th>Filename</th>" + list + "</table>";
+    list = "<h1>ESP32-CAM View, Delete, and Upload Photos</h1><p><a href=\"/\">Return to Home Page</a></p><button onclick=\"window.location.href='/uploadAll'\">Upload All</button><table><th>View</th><th>Delete</th><th>Filename</th>" + list + "</table>";
   }
 }
 
@@ -238,6 +238,7 @@ void takeSavePhoto(){
   strftime(now, 20, "%Y%m%d_%H%M%S", &timeinfo); // Format Date & Time
   String path = "/photo_" + String(now) + +"_" + message.c_str()+".jpg";
   lastPhoto = path;
+  message = "Time: "+ String(now) + ", Pass: "+ message;
   Serial.printf("Picture file name: %s\n", path.c_str());
   // Save picture to microSD card
   fs::FS &fs = SD_MMC; 
@@ -487,10 +488,12 @@ void setup() {
           if(USER_NAME == "admin"){
             Serial.println("Yes master, here you are!");
             writeFile(SPIFFS, input2Path, input2.c_str());
+            input1 = "admin";
             input2 = "Changed";
               // HTTP POST input2 value 
           } else {
             Serial.println("Try again!");
+            input1 = "normal user";
             input2 = "Unchanged because you are not authorized";
           } 
           // Write file to save value 
