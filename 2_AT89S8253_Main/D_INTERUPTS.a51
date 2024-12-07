@@ -1,14 +1,25 @@
 ;===============================================================
 ; 8051 External Interrupts to Control LED on P2.6
 ;===============================================================
-DATA_7SEG    EQU P0                 ; 7-SEGMENT DISPLAY CONNECTED TO PORT 0
-LED1         BIT P2.2               ; LED1 CONTROL BIT
-LED2         BIT P2.3               ; LED2 CONTROL BIT FOR ENABLING THE 2ND 7-SEGMENT
+DATA_7SEG    EQU P1                 ; 7-SEGMENT DISPLAY CONNECTED TO PORT 0
+D_CLOSE 	 EQU 0x0C6
+D_OPEN   	 EQU 0x0C0
+	
 BUTTON1      BIT P3.2               ; BUTTON 1 INPUT ON PORT 3.2
 BUTTON2      BIT P3.3               ; BUTTON 2 INPUT ON PORT 3.3
+BUTTON3 	 BIT P3.4				; BUTTON 3 INPUT ON PORT 3.4
+BUZZER       BIT P3.5
+LEN         BIT P3.6               ; LED ENABLE CONTROL BIT
+	
+PLED1		 BIT P2.0
+PLED2		 BIT P2.1
+PLED3		 BIT P2.2
+PLED4		 BIT P2.3
+PLED5		 BIT P2.4
+PLED6		 BIT P2.5
 LED_GREEN    BIT P2.6               ; GREEN LED BIT
-LED_RED      BIT P2.7               ; RED LED BIT
-BUZZER       BIT P2.4
+ELOCK        BIT P2.7               ; RED LED BIT
+	
 INDEX        EQU 0x30				; COUNT FOR NUMBER OF DIGITS ENTERED
 	
 ORG 0000H           ; Reset vector
@@ -20,12 +31,11 @@ SJMP INT1_ISR       ; Jump to INT1 interrupt service routine
 ORG 23H         ; Interrupt vector for serial interrupt
 AJMP UART_ISR 
 
-
 ;===============================================================
 ; Main Program
 ;===============================================================
 MAIN:
-    MOV P2, #00H        ; Clear all LEDs on port 2 (initialize)
+    SETB LEN        ; Turn on the led7seg
 	SETB EA             ; Enable global interrupts
 	
 	; SETUP UART Interrupt
@@ -51,18 +61,23 @@ MAIN:
 	
 	; CONFIGURE PINS
     CLR BUZZER
-    CLR LED_RED
+    CLR ELOCK
     CLR LED_GREEN                 ; TURN OFF GREEN LED INITIALLY
 	
 	; DISPLAY INITIAL VALUE (8) ON 7-SEGMENT
 	MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
-    MOV DATA_7SEG, #0x89
+    MOV DATA_7SEG, #D_CLOSE		  ; DISPLAY THE LETTER C
     MOV INDEX, #0
-	SETB LED2
 IDLE_LOOP:
-	CPL P3.4
-	ACALL DELAY
-    SJMP IDLE_LOOP      ; Stay in an idle loop, waiting for interrupts
+	CPL P3.7
+	JNB BUTTON3, BUTTON3_CHECKED
+	SJMP IDLE_LOOP
+	BUTTON3_CHECKED:
+		MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
+		MOV P2, #0x3F				  ; TURN ON ALL SUBMITTED LED
+		MOV DATA_7SEG, #D_CLOSE
+		MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
+	RET
 
 ;===============================================================
 ; Interrupt Service Routines
@@ -103,13 +118,14 @@ INT1_ISR:
     MOVC A, @A+DPTR
     MOV DATA_7SEG, A              ; DISPLAY NEXT VALUE ON 7-SEGMENT
 	ACALL CHECK_INDEX			  ; DISPLAY THE LED FOR SUBMITTED VALUE
-	CPL LED_RED                   ; Turn OFF LED connected to P2.6
     ; CHECK IF INDEX IS 6
     INC INDEX
     MOV A, INDEX
     CJNE A, #6, EXIT_1ISR              ; IF NOT, GO BACK TO LOOP
 	ACALL SEG_TO_ASCII
     ; TRANSMIT "****" AS STRING OVER UART
+	MOV A, #'S'                    ; SEND S OVER UART
+    ACALL SEND_CHAR
 	MOV A, R5                     ; SEND 1 OVER UART
     ACALL SEND_CHAR
     MOV A, R4                     ; SEND 2 OVER UART
@@ -133,7 +149,7 @@ INT1_ISR:
 	
 UART_ISR:
 	ACALL RECEIVE_CHAR     ; Get character from UART
-	CJNE A, #'P', EXIT_ISR ; If not 'P', exit
+	CJNE A, #'#', EXIT_ISR ; If not 'P', exit
 	;CPL LED_RED			   ; For debug
 
 	; 'P' detected, proceed to receive next 4 characters
@@ -162,27 +178,27 @@ UART_ISR:
 		; Compare index with 0
 		MOV A, index            ; Load the value of index into the accumulator
 		CJNE A, #0, CHECK_1L     ; If index ? 0, jump to CHECK_1
-		CLR P1.2               ; Set P1.2 if index = 0
+		CLR PLED1               ; Set P1.2 if index = 0
 		RET                     ; Return from subroutine
 		CHECK_1L:
 		CJNE A, #1, CHECK_2L     ; If index ? 1, jump to CHECK_2
-		CLR P1.3               ; Set P1.3 if index = 1
+		CLR PLED2               ; Set P1.3 if index = 1
 		RET                     ; Return from subroutine
 		CHECK_2L:
 		CJNE A, #2, CHECK_3L     ; If index ? 2, jump to CHECK_3
-		CLR P1.4               ; Set P1.4 if index = 2
+		CLR PLED3               ; Set P1.4 if index = 2
 		RET                     ; Return from subroutine
 		CHECK_3L:
 		CJNE A, #3, CHECK_4L     ; If index ? 2, jump to CHECK_3
-		CLR P1.5               ; Set P1.4 if index = 2
+		CLR PLED4               ; Set P1.4 if index = 2
 		RET                     ; Return from subroutine
 		CHECK_4L:
 		CJNE A, #4, CHECK_5L     ; If index ? 2, jump to CHECK_3
-		CLR P1.6               ; Set P1.4 if index = 2
+		CLR PLED5               ; Set P1.4 if index = 2
 		RET                     ; Return from subroutine
 		CHECK_5L:
 		CJNE A, #5, END_CHECKL   ; If index ? 3, jump to END_CHECK
-		CLR P1.7               ; Set P1.5 if index = 3
+		CLR PLED6               ; Set P1.5 if index = 3
 		END_CHECKL:
 		RET                     ; Return from subroutine
 		
@@ -206,23 +222,32 @@ UART_ISR:
 		MOV B,0x36
 		CJNE A, B, INCORRECT
 			CORRECT:
-			CLR LED_RED                  ; TURN OFF RED LED
 			SETB LED_GREEN               ; TURN ON GREEN LED
+			MOV DATA_7SEG, #D_OPEN        ; DISPLAY OPEN
 			ACALL DISPLAY_PASSWORD
+			CLR LEN
 			ACALL BUZZER_ON
+			SETB LEN
 			ACALL BUZZER_ON
+			CLR LEN
 			ACALL BUZZER_ON
+			SETB LEN
+			CLR LED_GREEN
+			ACALL DELAY
+			ACALL DELAY
+			ACALL DELAY
 			SJMP RESET
 			INCORRECT:
-			CLR LED_GREEN                ; TURN OFF GREEN LED
-			SETB LED_RED                 ; TURN ON RED LED
+			MOV DATA_7SEG, #D_CLOSE       ; DISPLAY CLOSE
+			CLR LEN
 			ACALL BUZZER_ON
+			SETB LEN
 			ACALL BUZZER_ON
 			SJMP RESET
 			RESET:		
 			MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
-			MOV P1, #0xFF				  ; TURN ON ALL SUBMITTED LED
-			MOV DATA_7SEG, #0x89
+			MOV P2, #0x3F				  ; TURN ON ALL SUBMITTED LED
+			MOV DATA_7SEG, #D_CLOSE
 			MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
 		RET
 		
