@@ -67,19 +67,16 @@ MAIN:
 	; DISPLAY INITIAL VALUE (8) ON 7-SEGMENT
 	MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
     ;MOV DATA_7SEG, #D_CLOSE		  ; DISPLAY THE LETTER C
-	MOV DATA_7SEG, #00		  ; DISPLAY THE LETTER C
+	MOV DATA_7SEG, #D_CLOSE		  ; DISPLAY THE LETTER C
 	SETB P1.7
     MOV INDEX, #0
 IDLE_LOOP:
 	CPL P3.7
 	JNB BUTTON3, BUTTON3_CHECKED
-	;ACALL DELAY
 	SJMP IDLE_LOOP
 	BUTTON3_CHECKED:
-		MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
-		MOV P2, #0x3F				  ; TURN ON ALL SUBMITTED LED
-		MOV DATA_7SEG, #D_CLOSE
-		MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
+		ACALL CHEKC_PASSWORD
+		ACALL DELAY
 	RET
 
 ;===============================================================
@@ -98,23 +95,38 @@ INT0_ISR:
     ; RESET DPTR TO START OF MA7SEG AFTER REACHING 9
     MOV DPTR, #MA7SEG-1
 	RETURN:
+	ACALL DELAY
 	RETI                ; Return from interrupt
 
 ; INT1 Interrupt Service Routine (Control the number submitted)
 INT1_ISR:
 	;ACALL BUZZER_ON
-    ; SHIFT NUMBERS IN REGISTERS TO MAKE ROOM FOR NEW VALUE IN R0
-    MOV A, R4
-    MOV R5, A                     ; MOVE PREVIOUS R4 TO R5
-    MOV A, R3
-    MOV R4, A                     ; MOVE PREVIOUS R3 TO R4
-    MOV A, R2
-    MOV R3, A                     ; MOVE PREVIOUS R2 TO R3
-    MOV A, R1
-    MOV R2, A                     ; MOVE PREVIOUS R1 TO R2
-    MOV A, R0
-    MOV R1, A                     ; MOVE PREVIOUS R0 TO R1
-    MOV R0, DATA_7SEG             ; STORE NEW NUMBER IN R0
+	; Save DATA_7SEG to the register corresponding to the value of INDEX (0-5)
+	MOV A, INDEX        ; Move INDEX to Accumulator for comparison
+	CJNE A, #0, CHECKI1  ; Compare INDEX with 0, jump if not equal
+	MOV R0, DATA_7SEG   ; If INDEX == 0, store DATA_7SEG in R0
+	SJMP END_CHECKI            ; Skip remaining checks
+	CHECKI1:
+	CJNE A, #1, CHECKI2  ; Compare INDEX with 1, jump if not equal
+	MOV R1, DATA_7SEG   ; If INDEX == 1, store DATA_7SEG in R1
+	SJMP END_CHECKI            ; Skip remaining checks
+	CHECKI2:
+	CJNE A, #2, CHECKI3  ; Compare INDEX with 2, jump if not equal
+	MOV R2, DATA_7SEG   ; If INDEX == 2, store DATA_7SEG in R2
+	SJMP END_CHECKI            ; Skip remaining checks
+	CHECKI3:
+	CJNE A, #3, CHECKI4  ; Compare INDEX with 3, jump if not equal
+	MOV R3, DATA_7SEG   ; If INDEX == 3, store DATA_7SEG in R3
+	SJMP END_CHECKI            ; Skip remaining checks
+	CHECKI4:
+	CJNE A, #4, CHECKI5  ; Compare INDEX with 4, jump if not equal
+	MOV R4, DATA_7SEG   ; If INDEX == 4, store DATA_7SEG in R4
+	SJMP END_CHECKI            ; Skip remaining checks
+	CHECKI5:
+	CJNE A, #5, END_CHECKI     ; Compare INDEX with 5, jump to END if not equal
+	MOV R5, DATA_7SEG   ; If INDEX == 5, store DATA_7SEG in R5
+	END_CHECKI:
+    ; Continue with the rest of the program
 	; DISPLAY NUMBER 0 ON 7-SEGMENT
     CLR A
     MOV DPTR, #MA7SEG             ; RESET DPTR TO START OF MA7SEG
@@ -126,28 +138,10 @@ INT1_ISR:
     MOV A, INDEX
     CJNE A, #6, EXIT_1ISR              ; IF NOT, GO BACK TO LOOP
 	ACALL SEG_TO_ASCII
-    ; TRANSMIT "****" AS STRING OVER UART
-	MOV A, #'S'                    ; SEND S OVER UART
-    ACALL SEND_CHAR
-	MOV A, R5                     ; SEND 1 OVER UART
-    ACALL SEND_CHAR
-    MOV A, R4                     ; SEND 2 OVER UART
-    ACALL SEND_CHAR
-    MOV A, R3                     ; SEND 3 OVER UART
-    ACALL SEND_CHAR
-    MOV A, R2                     ; SEND 4 OVER UART
-    ACALL SEND_CHAR
-    MOV A, R1                     ; SEND 5 OVER UART
-    ACALL SEND_CHAR
-    MOV A, R0                     ; SEND 6 OVER UART
-    ACALL SEND_CHAR
-	MOV A, #0x0D                ; Load ASCII for Carriage Return (CR)		
-	ACALL SEND_CHAR             ; Send CR via UART
-	MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
-	ACALL SEND_CHAR             ; Send LF via UART
 	; Check with out password
 	ACALL CHEKC_PASSWORD		
 	EXIT_1ISR:
+	ACALL DELAY
 	RETI                ; Return from interrupt
 	
 UART_ISR:
@@ -205,23 +199,24 @@ UART_ISR:
 		END_CHECKL:
 		RET                     ; Return from subroutine
 		
-	CHEKC_PASSWORD:	; CHECK EACH REGISTER AGAINST PASSWORD  
-		MOV A, R5
+	CHEKC_PASSWORD:	; CHECK EACH REGISTER AGAINST PASSWORD 
+		ACALL SEND_PASSWORD
+		MOV A, R0
 		MOV B,0x31
 		CJNE A, B, INCORRECT
-		MOV A, R4
+		MOV A, R1
 		MOV B,0x32
 		CJNE A, B, INCORRECT
-		MOV A, R3
+		MOV A, R2
 		MOV B,0x33
 		CJNE A, B, INCORRECT
-		MOV A, R2
+		MOV A, R3
 		MOV B,0x34
 		CJNE A, B, INCORRECT
-		MOV A, R1
+		MOV A, R4
 		MOV B,0x35
 		CJNE A, B, INCORRECT
-		MOV A, R0
+		MOV A, R5
 		MOV B,0x36
 		CJNE A, B, INCORRECT
 			CORRECT:
@@ -247,7 +242,13 @@ UART_ISR:
 			SETB LEN
 			ACALL BUZZER_ON
 			SJMP RESET
-			RESET:		
+			RESET:
+			MOV R0, #00H  ; Set R0 to 0
+			MOV R1, #00H  ; Set R1 to 0
+			MOV R2, #00H  ; Set R2 to 0
+			MOV R3, #00H  ; Set R3 to 0
+			MOV R4, #00H  ; Set R4 to 0
+			MOV R5, #00H  ; Set R5 to 0
 			MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
 			MOV P2, #0x3F				  ; TURN ON ALL SUBMITTED LED
 			MOV DATA_7SEG, #D_CLOSE
@@ -429,8 +430,28 @@ UART_ISR:
 		ACALL SEND_CHAR             ; Send CR via UART
 		MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
 		ACALL SEND_CHAR             ; Send LF via UART
-		RET	
-			
+		RET
+		
+	SEND_PASSWORD:
+		MOV A, #'S'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, R0                     ; SEND 1 OVER UART
+		ACALL SEND_CHAR
+		MOV A, R1                     ; SEND 2 OVER UART
+		ACALL SEND_CHAR
+		MOV A, R2                     ; SEND 3 OVER UART
+		ACALL SEND_CHAR
+		MOV A, R3                     ; SEND 4 OVER UART
+		ACALL SEND_CHAR
+		MOV A, R4                     ; SEND 5 OVER UART
+		ACALL SEND_CHAR
+		MOV A, R5                     ; SEND 6 OVER UART
+		ACALL SEND_CHAR
+		MOV A, #0x0D                ; Load ASCII for Carriage Return (CR)		
+		ACALL SEND_CHAR             ; Send CR via UART
+		MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
+		ACALL SEND_CHAR             ; Send LF via UART	
+		RET
 ;===============================================================
 ; Delay subrotines
 ;===============================================================
