@@ -8,6 +8,7 @@ D_OPEN   	 EQU 0x0C0
 BUTTON1      BIT P3.2               ; BUTTON 1 INPUT ON PORT 3.2
 BUTTON2      BIT P3.3               ; BUTTON 2 INPUT ON PORT 3.3
 BUTTON3 	 BIT P3.4				; BUTTON 3 INPUT ON PORT 3.4
+ELOCK		 BIT P3.7
 BUZZER       BIT P2.7
 LEN          BIT P1.7               ; LED ENABLE CONTROL BIT
 	
@@ -18,7 +19,7 @@ PLED4		 BIT P2.3
 PLED5		 BIT P2.4
 PLED6		 BIT P2.5
 LED_GREEN    BIT P2.6               ; GREEN LED BIT
-ELOCK        BIT P2.7               ; RED LED BIT
+LED_BLINK    BIT P2.7               ; RED LED BIT
 	
 INDEX        EQU 0x30				; COUNT FOR NUMBER OF DIGITS ENTERED
 	
@@ -60,7 +61,7 @@ MAIN:
 	MOV 0x36, #'0'
 	
 	; CONFIGURE PINS
-    CLR BUZZER
+    SETB BUZZER
     CLR ELOCK
     CLR LED_GREEN                 ; TURN OFF GREEN LED INITIALLY
 	
@@ -162,7 +163,7 @@ UART_ISR:
 	ACALL RECEIVE_CHAR     ; Get fourth number
 	MOV	0x36, A              ; Store in R5
 	; Send back received numbers over UART
-	ACALL SEND_RESPONSE
+	;ACALL SEND_RESPONSE
 	EXIT_ISR:
 	;CPL LED_GREEN ; For debug, if not P is inserted
 	RETI        ; Return from interrupt
@@ -219,9 +220,10 @@ UART_ISR:
 		MOV B,0x36
 		CJNE A, B, INCORRECT
 			CORRECT:
+			SETB ELOCK
 			SETB LED_GREEN               ; TURN ON GREEN LED
 			MOV DATA_7SEG, #D_OPEN        ; DISPLAY OPEN
-			ACALL DISPLAY_PASSWORD
+			;ACALL DISPLAY_PASSWORD
 			CLR LEN
 			ACALL BUZZER_ON
 			SETB LEN
@@ -233,6 +235,7 @@ UART_ISR:
 			ACALL DELAY
 			ACALL DELAY
 			ACALL DELAY
+			CLR ELOCK
 			SJMP RESET
 			INCORRECT:
 			MOV DATA_7SEG, #D_CLOSE       ; DISPLAY CLOSE
@@ -252,6 +255,7 @@ UART_ISR:
 			MOV P2, #0x3F				  ; TURN ON ALL SUBMITTED LED
 			MOV DATA_7SEG, #D_CLOSE
 			MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
+			SETB BUZZER
 		RET
 		
 ;===============================================================
