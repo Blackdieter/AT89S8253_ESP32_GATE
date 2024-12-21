@@ -8,7 +8,7 @@ D_OPEN   	 EQU 0x0C0
 BUTTON1      BIT P3.2               ; BUTTON 1 INPUT ON PORT 3.2
 BUTTON2      BIT P3.3               ; BUTTON 2 INPUT ON PORT 3.3
 BUTTON3 	 BIT P3.4				; BUTTON 3 INPUT ON PORT 3.4
-BUZZER       BIT P2.7
+BUZZER       BIT P3.5
 LEN          BIT P1.7               ; LED ENABLE CONTROL BIT
 	
 PLED1		 BIT P2.0
@@ -24,10 +24,6 @@ INDEX        EQU 0x30				; COUNT FOR NUMBER OF DIGITS ENTERED
 	
 ORG 0000H           ; Reset vector
 SJMP MAIN           ; Jump to main program	
-ORG 0003H           ; External Interrupt 0 (INT0) vector
-SJMP INT0_ISR       ; Jump to INT0 interrupt service routine
-ORG 0013H           ; External Interrupt 1 (INT1) vector
-SJMP INT1_ISR       ; Jump to INT1 interrupt service routine
 ORG 23H         ; Interrupt vector for serial interrupt
 AJMP UART_ISR 
 
@@ -44,12 +40,6 @@ MAIN:
     MOV SCON, #50H ; Serial mode 1, 8-bit data, 1 stop bit, REN enabled
     SETB TR1       ; Start Timer 1
 	SETB ES        ; Enable serial interrupt
-	
-	; SETUP external Interrupt
-    SETB EX0            ; Enable external interrupt 0 (INT0)
-    SETB EX1            ; Enable external interrupt 1 (INT1)
-	 CLR IT0             ; Configure INT0 as level-triggered (low level)
-    CLR IT1             ; Configure INT1 as level-triggered (low level)
 	
 	; Initial default password
 	MOV 0x31, #'2'
@@ -71,9 +61,10 @@ MAIN:
 	SETB P1.7
     MOV INDEX, #0
 IDLE_LOOP:
-	CPL LED_GREEN
-	ACALL DELAY
-	;JNB BUTTON3, BUTTON3_CHECKED
+	CPL P3.7
+	JNB BUTTON1, INT0_ISR
+	JNB BUTTON2, INT1_ISR
+	JNB BUTTON3, BUTTON3_CHECKED
 	SJMP IDLE_LOOP
 	BUTTON3_CHECKED:
 		ACALL CHEKC_PASSWORD
@@ -86,17 +77,17 @@ IDLE_LOOP:
 
 ; INT0 Interrupt Service Routine (Accumulate the number)
 INT0_ISR:
-	ACALL BUZZER_ON
     CLR A                          ; CLEAR ACCUMULATOR
     INC DPTR                       ; INCREMENT DPTR FOR NEXT VALUE
     MOVC A, @A+DPTR                ; LOAD NEXT PATTERN FROM MA7SEG
     MOV DATA_7SEG, A               ; DISPLAY NUMBER ON 7-SEGMENT
+	ACALL BUZZER_ON
     ; CHECK IF VALUE IS NOT 0x90 (9)
     CJNE A, #0x90, RETURN
     ; RESET DPTR TO START OF MA7SEG AFTER REACHING 9
     MOV DPTR, #MA7SEG-1
 	RETURN:
-	RETI                ; Return from interrupt
+	RET                ; Return from interrupt
 
 ; INT1 Interrupt Service Routine (Control the number submitted)
 INT1_ISR:
@@ -141,14 +132,14 @@ INT1_ISR:
 	; Check with out password
 	ACALL CHEKC_PASSWORD		
 	EXIT_1ISR:
-	RETI                ; Return from interrupt
+	RET                ; Return from interrupt
 	
 UART_ISR:
 	ACALL RECEIVE_CHAR     ; Get character from UART
-	CJNE A, #'#', EXIT_ISR ; If not '#', exit
+	CJNE A, #'#', EXIT_ISR ; If not 'P', exit
 	;CPL LED_RED			   ; For debug
 
-	; 'P' detected, proceed to receive next 6 characters
+	; 'P' detected, proceed to receive next 4 characters
 	ACALL RECEIVE_CHAR     ; Get first number
 	MOV 0x31, A              ; Store in R0
 	ACALL RECEIVE_CHAR     ; Get second number
@@ -455,9 +446,9 @@ UART_ISR:
 ; Delay subrotines
 ;===============================================================
 BUZZER_ON:
-	CLR BUZZER
-	ACALL DELAY_B
 	SETB BUZZER
+	ACALL DELAY_B
+	CLR BUZZER
 	ACALL DELAY_B
 	RET
 DELAY_B:

@@ -1,0 +1,603 @@
+A51 MACRO ASSEMBLER  FINAL                                                                12/21/2024 11:23:26 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\FINAL.obj
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE FINAL.a51 SET(SMALL) DEBUG PRINT(.\Listings\FINAL.lst) OBJECT(.\Objects
+                      \FINAL.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+                       1     ;===============================================================
+                       2     ; 8051 External Interrupts to Control LED on P2.6
+                       3     ;===============================================================
+  0090                 4     DATA_7SEG    EQU P1                 ; 7-SEGMENT DISPLAY CONNECTED TO PORT 0
+  00C6                 5     D_CLOSE          EQU 0x0C6
+  00C0                 6     D_OPEN           EQU 0x0C0
+                       7             
+  00B2                 8     BUTTON1      BIT P3.2               ; BUTTON 1 INPUT ON PORT 3.2
+  00B3                 9     BUTTON2      BIT P3.3               ; BUTTON 2 INPUT ON PORT 3.3
+  00B4                10     BUTTON3          BIT P3.4                               ; BUTTON 3 INPUT ON PORT 3.4
+  00B5                11     BUZZER       BIT P3.5
+  0097                12     LEN          BIT P1.7               ; LED ENABLE CONTROL BIT
+                      13             
+  00A0                14     PLED1            BIT P2.0
+  00A1                15     PLED2            BIT P2.1
+  00A2                16     PLED3            BIT P2.2
+  00A3                17     PLED4            BIT P2.3
+  00A4                18     PLED5            BIT P2.4
+  00A5                19     PLED6            BIT P2.5
+  00A6                20     LED_GREEN    BIT P2.6               ; GREEN LED BIT
+  00A7                21     ELOCK        BIT P2.7               ; RED LED BIT
+                      22             
+  0030                23     INDEX        EQU 0x30                           ; COUNT FOR NUMBER OF DIGITS ENTERED
+                      24             
+0000                  25     ORG 0000H           ; Reset vector
+0000 8023             26     SJMP MAIN           ; Jump to main program      
+0023                  27     ORG 23H         ; Interrupt vector for serial interrupt
+0023 01BA             28     AJMP UART_ISR 
+                      29     
+                      30     ;===============================================================
+                      31     ; Main Program
+                      32     ;===============================================================
+0025                  33     MAIN:
+0025 D297             34         SETB LEN        ; Turn on the led7seg
+0027 D2AF             35             SETB EA             ; Enable global interrupts
+                      36             
+                      37             ; SETUP UART Interrupt
+0029 758920           38             MOV TMOD, #20H ; Timer 1 in mode 2 (8-bit auto-reload)
+002C 758DFD           39         MOV TH1, #-3   ; Baud rate 9600 for 11.0592 MHz crystal
+002F 759850           40         MOV SCON, #50H ; Serial mode 1, 8-bit data, 1 stop bit, REN enabled
+0032 D28E             41         SETB TR1       ; Start Timer 1
+0034 D2AC             42             SETB ES        ; Enable serial interrupt
+                      43             
+                      44             ; Initial default password
+0036 753132           45             MOV 0x31, #'2'
+0039 753231           46             MOV 0x32, #'1'
+003C 753330           47             MOV 0x33, #'0'
+003F 753430           48             MOV 0x34, #'0'
+0042 753530           49             MOV 0x35, #'0'
+0045 753630           50             MOV 0x36, #'0'
+                      51             
+                      52             ; CONFIGURE PINS
+0048 C2B5             53         CLR BUZZER
+004A C2A7             54         CLR ELOCK
+004C C2A6             55         CLR LED_GREEN                 ; TURN OFF GREEN LED INITIALLY
+                      56             
+                      57             ; DISPLAY INITIAL VALUE (8) ON 7-SEGMENT
+A51 MACRO ASSEMBLER  FINAL                                                                12/21/2024 11:23:26 PAGE     2
+
+004E 9002CC           58             MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
+                      59         ;MOV DATA_7SEG, #D_CLOSE              ; DISPLAY THE LETTER C
+0051 7590C6           60             MOV DATA_7SEG, #D_CLOSE           ; DISPLAY THE LETTER C
+0054 D297             61             SETB P1.7
+0056 753000           62         MOV INDEX, #0
+0059                  63     IDLE_LOOP:
+0059 B2B7             64             CPL P3.7
+005B 30B20D           65             JNB BUTTON1, INT0_ISR
+005E 30B318           66             JNB BUTTON2, INT1_ISR
+0061 30B402           67             JNB BUTTON3, BUTTON3_CHECKED
+0064 80F3             68             SJMP IDLE_LOOP
+0066                  69             BUTTON3_CHECKED:
+0066 3100             70                     ACALL CHEKC_PASSWORD
+0068 51C0             71                     ACALL DELAY
+006A 22               72             RET
+                      73     
+                      74     ;===============================================================
+                      75     ; Interrupt Service Routines
+                      76     ;===============================================================
+                      77     
+                      78     ; INT0 Interrupt Service Routine (Accumulate the number)
+006B                  79     INT0_ISR:
+006B E4               80         CLR A                          ; CLEAR ACCUMULATOR
+006C A3               81         INC DPTR                       ; INCREMENT DPTR FOR NEXT VALUE
+006D 93               82         MOVC A, @A+DPTR                ; LOAD NEXT PATTERN FROM MA7SEG
+006E F590             83         MOV DATA_7SEG, A               ; DISPLAY NUMBER ON 7-SEGMENT
+0070 51AA             84             ACALL BUZZER_ON
+                      85         ; CHECK IF VALUE IS NOT 0x90 (9)
+0072 B49003           86         CJNE A, #0x90, RETURN
+                      87         ; RESET DPTR TO START OF MA7SEG AFTER REACHING 9
+0075 9002CC           88         MOV DPTR, #MA7SEG-1
+0078                  89             RETURN:
+0078 22               90             RET                ; Return from interrupt
+                      91     
+                      92     ; INT1 Interrupt Service Routine (Control the number submitted)
+0079                  93     INT1_ISR:
+0079 51AA             94             ACALL BUZZER_ON
+                      95             ; Save DATA_7SEG to the register corresponding to the value of INDEX (0-5)
+007B E530             96             MOV A, INDEX        ; Move INDEX to Accumulator for comparison
+007D B40004           97             CJNE A, #0, CHECKI1  ; Compare INDEX with 0, jump if not equal
+0080 A890             98             MOV R0, DATA_7SEG   ; If INDEX == 0, store DATA_7SEG in R0
+0082 8021             99             SJMP END_CHECKI            ; Skip remaining checks
+0084                 100             CHECKI1:
+0084 B40104          101             CJNE A, #1, CHECKI2  ; Compare INDEX with 1, jump if not equal
+0087 A990            102             MOV R1, DATA_7SEG   ; If INDEX == 1, store DATA_7SEG in R1
+0089 801A            103             SJMP END_CHECKI            ; Skip remaining checks
+008B                 104             CHECKI2:
+008B B40204          105             CJNE A, #2, CHECKI3  ; Compare INDEX with 2, jump if not equal
+008E AA90            106             MOV R2, DATA_7SEG   ; If INDEX == 2, store DATA_7SEG in R2
+0090 8013            107             SJMP END_CHECKI            ; Skip remaining checks
+0092                 108             CHECKI3:
+0092 B40304          109             CJNE A, #3, CHECKI4  ; Compare INDEX with 3, jump if not equal
+0095 AB90            110             MOV R3, DATA_7SEG   ; If INDEX == 3, store DATA_7SEG in R3
+0097 800C            111             SJMP END_CHECKI            ; Skip remaining checks
+0099                 112             CHECKI4:
+0099 B40404          113             CJNE A, #4, CHECKI5  ; Compare INDEX with 4, jump if not equal
+009C AC90            114             MOV R4, DATA_7SEG   ; If INDEX == 4, store DATA_7SEG in R4
+009E 8005            115             SJMP END_CHECKI            ; Skip remaining checks
+00A0                 116             CHECKI5:
+00A0 B40502          117             CJNE A, #5, END_CHECKI     ; Compare INDEX with 5, jump to END if not equal
+00A3 AD90            118             MOV R5, DATA_7SEG   ; If INDEX == 5, store DATA_7SEG in R5
+00A5                 119             END_CHECKI:
+                     120         ; Continue with the rest of the program
+                     121             ; DISPLAY NUMBER 0 ON 7-SEGMENT
+00A5 E4              122         CLR A
+00A6 9002CD          123         MOV DPTR, #MA7SEG             ; RESET DPTR TO START OF MA7SEG
+A51 MACRO ASSEMBLER  FINAL                                                                12/21/2024 11:23:26 PAGE     3
+
+00A9 93              124         MOVC A, @A+DPTR
+00AA F590            125         MOV DATA_7SEG, A              ; DISPLAY NEXT VALUE ON 7-SEGMENT
+00AC 11DA            126             ACALL CHECK_INDEX                         ; DISPLAY THE LED FOR SUBMITTED VALUE
+                     127         ; CHECK IF INDEX IS 6
+00AE 0530            128         INC INDEX
+00B0 E530            129         MOV A, INDEX
+00B2 B40604          130         CJNE A, #6, EXIT_1ISR              ; IF NOT, GO BACK TO LOOP
+00B5 3171            131             ACALL SEG_TO_ASCII
+                     132             ; Check with out password
+00B7 3100            133             ACALL CHEKC_PASSWORD            
+00B9                 134             EXIT_1ISR:
+00B9 22              135             RET                ; Return from interrupt
+                     136             
+00BA                 137     UART_ISR:
+00BA 31C9            138             ACALL RECEIVE_CHAR     ; Get character from UART
+00BC B4231A          139             CJNE A, #'#', EXIT_ISR ; If not 'P', exit
+                     140             ;CPL LED_RED                       ; For debug
+                     141     
+                     142             ; 'P' detected, proceed to receive next 4 characters
+00BF 31C9            143             ACALL RECEIVE_CHAR     ; Get first number
+00C1 F531            144             MOV 0x31, A              ; Store in R0
+00C3 31C9            145             ACALL RECEIVE_CHAR     ; Get second number
+00C5 F532            146             MOV 0x32, A              ; Store in R1
+00C7 31C9            147             ACALL RECEIVE_CHAR     ; Get third number
+00C9 F533            148             MOV 0x33, A              ; Store in R2
+00CB 31C9            149             ACALL RECEIVE_CHAR     ; Get fourth number
+00CD F534            150             MOV     0x34, A              ; Store in R3
+00CF 31C9            151             ACALL RECEIVE_CHAR     ; Get third number
+00D1 F535            152             MOV 0x35, A              ; Store in R4
+00D3 31C9            153             ACALL RECEIVE_CHAR     ; Get fourth number
+00D5 F536            154             MOV     0x36, A              ; Store in R5
+                     155             ; Send back received numbers over UART
+00D7 31D1            156             ACALL SEND_RESPONSE
+00D9                 157             EXIT_ISR:
+                     158             ;CPL LED_GREEN ; For debug, if not P is inserted
+00D9 32              159             RETI        ; Return from interrupt
+                     160             
+                     161     ;===============================================================
+                     162     ; Logical check subrotines
+                     163     ;===============================================================
+00DA                 164             CHECK_INDEX:    ; Control the indicate led by the index
+                     165                     ; Compare index with 0
+00DA E530            166                     MOV A, index            ; Load the value of index into the accumulator
+00DC B40003          167                     CJNE A, #0, CHECK_1L     ; If index ? 0, jump to CHECK_1
+00DF C2A0            168                     CLR PLED1               ; Set P1.2 if index = 0
+00E1 22              169                     RET                     ; Return from subroutine
+00E2                 170                     CHECK_1L:
+00E2 B40103          171                     CJNE A, #1, CHECK_2L     ; If index ? 1, jump to CHECK_2
+00E5 C2A1            172                     CLR PLED2               ; Set P1.3 if index = 1
+00E7 22              173                     RET                     ; Return from subroutine
+00E8                 174                     CHECK_2L:
+00E8 B40203          175                     CJNE A, #2, CHECK_3L     ; If index ? 2, jump to CHECK_3
+00EB C2A2            176                     CLR PLED3               ; Set P1.4 if index = 2
+00ED 22              177                     RET                     ; Return from subroutine
+00EE                 178                     CHECK_3L:
+00EE B40303          179                     CJNE A, #3, CHECK_4L     ; If index ? 2, jump to CHECK_3
+00F1 C2A3            180                     CLR PLED4               ; Set P1.4 if index = 2
+00F3 22              181                     RET                     ; Return from subroutine
+00F4                 182                     CHECK_4L:
+00F4 B40403          183                     CJNE A, #4, CHECK_5L     ; If index ? 2, jump to CHECK_3
+00F7 C2A4            184                     CLR PLED5               ; Set P1.4 if index = 2
+00F9 22              185                     RET                     ; Return from subroutine
+00FA                 186                     CHECK_5L:
+00FA B40502          187                     CJNE A, #5, END_CHECKL   ; If index ? 3, jump to END_CHECK
+00FD C2A5            188                     CLR PLED6               ; Set P1.5 if index = 3
+00FF                 189                     END_CHECKL:
+A51 MACRO ASSEMBLER  FINAL                                                                12/21/2024 11:23:26 PAGE     4
+
+00FF 22              190                     RET                     ; Return from subroutine
+                     191                     
+0100                 192             CHEKC_PASSWORD: ; CHECK EACH REGISTER AGAINST PASSWORD 
+0100 518B            193                     ACALL SEND_PASSWORD
+0102 E8              194                     MOV A, R0
+0103 8531F0          195                     MOV B,0x31
+0106 B5F042          196                     CJNE A, B, INCORRECT
+0109 E9              197                     MOV A, R1
+010A 8532F0          198                     MOV B,0x32
+010D B5F03B          199                     CJNE A, B, INCORRECT
+0110 EA              200                     MOV A, R2
+0111 8533F0          201                     MOV B,0x33
+0114 B5F034          202                     CJNE A, B, INCORRECT
+0117 EB              203                     MOV A, R3
+0118 8534F0          204                     MOV B,0x34
+011B B5F02D          205                     CJNE A, B, INCORRECT
+011E EC              206                     MOV A, R4
+011F 8535F0          207                     MOV B,0x35
+0122 B5F026          208                     CJNE A, B, INCORRECT
+0125 ED              209                     MOV A, R5
+0126 8536F0          210                     MOV B,0x36
+0129 B5F01F          211                     CJNE A, B, INCORRECT
+012C                 212                             CORRECT:
+012C D2A6            213                             SETB LED_GREEN               ; TURN ON GREEN LED
+012E 7590C0          214                             MOV DATA_7SEG, #D_OPEN        ; DISPLAY OPEN
+0131 5132            215                             ACALL DISPLAY_PASSWORD
+0133 C297            216                             CLR LEN
+0135 51AA            217                             ACALL BUZZER_ON
+0137 D297            218                             SETB LEN
+0139 51AA            219                             ACALL BUZZER_ON
+013B C297            220                             CLR LEN
+013D 51AA            221                             ACALL BUZZER_ON
+013F D297            222                             SETB LEN
+0141 C2A6            223                             CLR LED_GREEN
+0143 51C0            224                             ACALL DELAY
+0145 51C0            225                             ACALL DELAY
+0147 51C0            226                             ACALL DELAY
+0149 800D            227                             SJMP RESET
+014B                 228                             INCORRECT:
+014B 7590C6          229                             MOV DATA_7SEG, #D_CLOSE       ; DISPLAY CLOSE
+014E C297            230                             CLR LEN
+0150 51AA            231                             ACALL BUZZER_ON
+0152 D297            232                             SETB LEN
+0154 51AA            233                             ACALL BUZZER_ON
+0156 8000            234                             SJMP RESET
+0158                 235                             RESET:
+0158 7800            236                             MOV R0, #00H  ; Set R0 to 0
+015A 7900            237                             MOV R1, #00H  ; Set R1 to 0
+015C 7A00            238                             MOV R2, #00H  ; Set R2 to 0
+015E 7B00            239                             MOV R3, #00H  ; Set R3 to 0
+0160 7C00            240                             MOV R4, #00H  ; Set R4 to 0
+0162 7D00            241                             MOV R5, #00H  ; Set R5 to 0
+0164 753000          242                             MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
+0167 75A03F          243                             MOV P2, #0x3F                             ; TURN ON ALL SUBMITTED L
+                             ED
+016A 7590C6          244                             MOV DATA_7SEG, #D_CLOSE
+016D 9002CC          245                             MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7
+                             SEG -1
+0170 22              246                     RET
+                     247                     
+                     248     ;===============================================================
+                     249     ; Convert subrotines
+                     250     ;===============================================================
+0171                 251             SEG_TO_ASCII:   ; Convert 7seg led to ascii
+0171 E8              252                     MOV A, R0
+0172 318A            253                     ACALL CONVERT_DIGIT
+A51 MACRO ASSEMBLER  FINAL                                                                12/21/2024 11:23:26 PAGE     5
+
+0174 F8              254                     MOV R0, A
+0175 E9              255                     MOV A, R1
+0176 318A            256                     ACALL CONVERT_DIGIT
+0178 F9              257                     MOV R1, A
+0179 EA              258                     MOV A, R2
+017A 318A            259                     ACALL CONVERT_DIGIT
+017C FA              260                     MOV R2, A
+017D EB              261                     MOV A, R3
+017E 318A            262                     ACALL CONVERT_DIGIT
+0180 FB              263                     MOV R3, A
+0181 EC              264                     MOV A, R4
+0182 318A            265                     ACALL CONVERT_DIGIT
+0184 FC              266                     MOV R4, A
+0185 ED              267                     MOV A, R5
+0186 318A            268                     ACALL CONVERT_DIGIT
+0188 FD              269                     MOV R5, A
+0189 22              270                     RET
+                     271     
+018A                 272             CONVERT_DIGIT:
+018A B4C003          273                     CJNE A, #0C0H, CHECK_1
+018D 7430            274                     MOV A, #'0'
+018F 22              275                     RET
+0190                 276                     CHECK_1:
+0190 B4F903          277                     CJNE A, #0F9H, CHECK_2
+0193 7431            278                     MOV A, #'1'
+0195 22              279                     RET
+0196                 280                     CHECK_2:
+0196 B4A403          281                     CJNE A, #0A4H, CHECK_3
+0199 7432            282                     MOV A, #'2'
+019B 22              283                     RET
+019C                 284                     CHECK_3:
+019C B4B003          285                     CJNE A, #0B0H, CHECK_4
+019F 7433            286                     MOV A, #'3'
+01A1 22              287                     RET
+01A2                 288                     CHECK_4:
+01A2 B49903          289                     CJNE A, #099H, CHECK_5
+01A5 7434            290                     MOV A, #'4'
+01A7 22              291                     RET
+01A8                 292                     CHECK_5:
+01A8 B49203          293                     CJNE A, #092H, CHECK_6
+01AB 7435            294                     MOV A, #'5'
+01AD 22              295                     RET
+01AE                 296                     CHECK_6:
+01AE B48203          297                     CJNE A, #082H, CHECK_7
+01B1 7436            298                     MOV A, #'6'
+01B3 22              299                     RET
+01B4                 300                     CHECK_7:
+01B4 B4F803          301                     CJNE A, #0F8H, CHECK_8
+01B7 7437            302                     MOV A, #'7'
+01B9 22              303                     RET
+01BA                 304                     CHECK_8:
+01BA B48003          305                     CJNE A, #080H, CHECK_9
+01BD 7438            306                     MOV A, #'8'
+01BF 22              307                     RET
+01C0                 308                     CHECK_9:
+01C0 B49003          309                     CJNE A, #090H, ERROR
+01C3 7439            310                     MOV A, #'9'
+01C5 22              311                     RET
+01C6                 312                     ERROR:
+01C6 743F            313                     MOV A, #'?'
+01C8 22              314                     RET
+                     315                             
+                     316     ;===============================================================
+                     317     ; Write and display subrotines
+                     318     ;===============================================================
+01C9                 319             RECEIVE_CHAR:
+A51 MACRO ASSEMBLER  FINAL                                                                12/21/2024 11:23:26 PAGE     6
+
+01C9 3098FD          320                     JNB RI, RECEIVE_CHAR   ; Wait until a character is received
+01CC E599            321                     MOV A, SBUF            ; Move received byte to Accumulator
+01CE C298            322                     CLR RI                 ; Clear RI for next reception
+01D0 22              323                     RET
+                     324             
+01D1                 325             SEND_RESPONSE:
+01D1 744E            326                     MOV A, #'N'                 ; Load ASCII of 'N' into A
+01D3 512A            327                     ACALL SEND_CHAR             ; Send character via UART
+01D5 7445            328                     MOV A, #'E'                 ; Load ASCII of 'E' into A
+01D7 512A            329                     ACALL SEND_CHAR             ; Send character via UART
+01D9 7457            330                     MOV A, #'W'                 ; Load ASCII of 'W' into A
+01DB 512A            331                     ACALL SEND_CHAR             ; Send character via UART
+01DD 7420            332                     MOV A, #' '                 ; Load ASCII of space into A
+01DF 512A            333                     ACALL SEND_CHAR             ; Send character via UART
+01E1 7450            334                     MOV A, #'P'                 ; Load ASCII of 'P' into A
+01E3 512A            335                     ACALL SEND_CHAR             ; Send character via UART
+01E5 7441            336                     MOV A, #'A'                 ; Load ASCII of 'A' into A
+01E7 512A            337                     ACALL SEND_CHAR             ; Send character via UART
+01E9 7453            338                     MOV A, #'S'                 ; Load ASCII of 'S' into A
+01EB 512A            339                     ACALL SEND_CHAR             ; Send character via UART
+01ED 7453            340                     MOV A, #'S'                 ; Load ASCII of 'S' into A
+01EF 512A            341                     ACALL SEND_CHAR             ; Send character via UART
+01F1 7457            342                     MOV A, #'W'                 ; Load ASCII of 'W' into A
+01F3 512A            343                     ACALL SEND_CHAR             ; Send character via UART
+01F5 744F            344                     MOV A, #'O'                 ; Load ASCII of 'O' into A
+01F7 512A            345                     ACALL SEND_CHAR             ; Send character via UART
+01F9 7452            346                     MOV A, #'R'                 ; Load ASCII of 'R' into A
+01FB 512A            347                     ACALL SEND_CHAR             ; Send character via UART
+01FD 7444            348                     MOV A, #'D'                 ; Load ASCII of 'D' into A
+01FF 512A            349                     ACALL SEND_CHAR             ; Send character via UART
+0201 743A            350                     MOV A, #':'                 ; Load ASCII of ':' into A
+0203 512A            351                     ACALL SEND_CHAR             ; Send character via UART
+0205 7420            352                     MOV A, #' '                 ; Load ASCII of space into A
+0207 512A            353                     ACALL SEND_CHAR             ; Send character via UART
+0209 E531            354                     MOV A, 0x31              ; Load first digit
+020B 512A            355                     ACALL SEND_CHAR        ; Send character
+020D E532            356                     MOV A, 0x32              ; Load second digit
+020F 512A            357                     ACALL SEND_CHAR        ; Send character
+0211 E533            358                     MOV A, 0x33            ; Load third digit
+0213 512A            359                     ACALL SEND_CHAR        ; Send character
+0215 E534            360                     MOV A, 0x34              ; Load fourth digit
+0217 512A            361                     ACALL SEND_CHAR        ; Send character 
+0219 E535            362                     MOV A, 0x35              ; Load fourth digit
+021B 512A            363                     ACALL SEND_CHAR        ; Send character
+021D E536            364                     MOV A, 0x36              ; Load fourth digit
+021F 512A            365                     ACALL SEND_CHAR        ; Send character
+0221 740D            366                     MOV A, #0x0D                ; Load ASCII for Carriage Return (CR)          
+                                  
+0223 512A            367                     ACALL SEND_CHAR             ; Send CR via UART
+0225 740A            368                     MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
+0227 512A            369                     ACALL SEND_CHAR             ; Send LF via UART
+0229 22              370                     RET
+                     371             
+022A                 372             SEND_CHAR:
+022A F599            373                     MOV SBUF, A            ; Load A into SBUF to transmit
+022C 3099FD          374                     JNB TI, $              ; Wait for transmission to complete
+022F C299            375                     CLR TI                 ; Clear transmit interrupt flag
+0231 22              376                     RET
+                     377             
+0232                 378             DISPLAY_PASSWORD:
+0232 7450            379                     MOV A, #'P'                 ; Load ASCII of 'P' into A
+0234 512A            380                     ACALL SEND_CHAR             ; Send character via UART
+0236 7441            381                     MOV A, #'A'                 ; Load ASCII of 'A' into A
+0238 512A            382                     ACALL SEND_CHAR             ; Send character via UART
+023A 7453            383                     MOV A, #'S'                 ; Load ASCII of 'S' into A
+023C 512A            384                     ACALL SEND_CHAR             ; Send character via UART
+A51 MACRO ASSEMBLER  FINAL                                                                12/21/2024 11:23:26 PAGE     7
+
+023E 7453            385                     MOV A, #'S'                 ; Load ASCII of 'S' into A
+0240 512A            386                     ACALL SEND_CHAR             ; Send character via UART
+0242 7457            387                     MOV A, #'W'                 ; Load ASCII of 'W' into A
+0244 512A            388                     ACALL SEND_CHAR             ; Send character via UART
+0246 744F            389                     MOV A, #'O'                 ; Load ASCII of 'O' into A
+0248 512A            390                     ACALL SEND_CHAR             ; Send character via UART
+024A 7452            391                     MOV A, #'R'                 ; Load ASCII of 'R' into A
+024C 512A            392                     ACALL SEND_CHAR             ; Send character via UART
+024E 7444            393                     MOV A, #'D'                 ; Load ASCII of 'D' into A
+0250 512A            394                     ACALL SEND_CHAR             ; Send character via UART
+0252 7420            395                     MOV A, #' '                 ; Load ASCII of space into A
+0254 512A            396                     ACALL SEND_CHAR             ; Send character via UART
+0256 7449            397                     MOV A, #'I'                 ; Load ASCII of 'I' into A
+0258 512A            398                     ACALL SEND_CHAR             ; Send character via UART
+025A 7453            399                     MOV A, #'S'                 ; Load ASCII of 'S' into A
+025C 512A            400                     ACALL SEND_CHAR             ; Send character via UART
+025E 743A            401                     MOV A, #':'                 ; Load ASCII of ':' into A
+0260 512A            402                     ACALL SEND_CHAR             ; Send character via UART
+0262 7420            403                     MOV A, #' '                 ; Load ASCII of space into A
+0264 512A            404                     ACALL SEND_CHAR             ; Send character via UART
+0266 E531            405                     MOV A,0x31
+0268 512A            406                     ACALL SEND_CHAR
+026A E532            407                     MOV A,0x32
+026C 512A            408                     ACALL SEND_CHAR
+026E E533            409                     MOV A,0x33
+0270 512A            410                     ACALL SEND_CHAR 
+0272 E534            411                     MOV A,0x34
+0274 512A            412                     ACALL SEND_CHAR
+0276 E535            413                     MOV A,0x35              ; Load fourth digit
+0278 512A            414                     ACALL SEND_CHAR        ; Send character
+027A E536            415                     MOV A,0x36              ; Load fourth digit
+027C 512A            416                     ACALL SEND_CHAR        ; Send character
+027E 7420            417                     MOV A, #' '
+0280 512A            418                     ACALL SEND_CHAR
+0282 740D            419                     MOV A, #0x0D                ; Load ASCII for Carriage Return (CR)          
+                                  
+0284 512A            420                     ACALL SEND_CHAR             ; Send CR via UART
+0286 740A            421                     MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
+0288 512A            422                     ACALL SEND_CHAR             ; Send LF via UART
+028A 22              423                     RET
+                     424                     
+028B                 425             SEND_PASSWORD:
+028B 7453            426                     MOV A, #'S'                    ; SEND S OVER UART
+028D 512A            427                     ACALL SEND_CHAR
+028F E8              428                     MOV A, R0                     ; SEND 1 OVER UART
+0290 512A            429                     ACALL SEND_CHAR
+0292 E9              430                     MOV A, R1                     ; SEND 2 OVER UART
+0293 512A            431                     ACALL SEND_CHAR
+0295 EA              432                     MOV A, R2                     ; SEND 3 OVER UART
+0296 512A            433                     ACALL SEND_CHAR
+0298 EB              434                     MOV A, R3                     ; SEND 4 OVER UART
+0299 512A            435                     ACALL SEND_CHAR
+029B EC              436                     MOV A, R4                     ; SEND 5 OVER UART
+029C 512A            437                     ACALL SEND_CHAR
+029E ED              438                     MOV A, R5                     ; SEND 6 OVER UART
+029F 512A            439                     ACALL SEND_CHAR
+02A1 740D            440                     MOV A, #0x0D                ; Load ASCII for Carriage Return (CR)          
+                                  
+02A3 512A            441                     ACALL SEND_CHAR             ; Send CR via UART
+02A5 740A            442                     MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
+02A7 512A            443                     ACALL SEND_CHAR             ; Send LF via UART  
+02A9 22              444                     RET
+                     445     ;===============================================================
+                     446     ; Delay subrotines
+                     447     ;===============================================================
+02AA                 448     BUZZER_ON:
+A51 MACRO ASSEMBLER  FINAL                                                                12/21/2024 11:23:26 PAGE     8
+
+02AA D2B5            449             SETB BUZZER
+02AC 51B3            450             ACALL DELAY_B
+02AE C2B5            451             CLR BUZZER
+02B0 51B3            452             ACALL DELAY_B
+02B2 22              453             RET
+02B3                 454     DELAY_B:
+02B3 7F02            455                     MOV R7, #2                      ; (1/20)*1 ms
+02B5 7EFA            456             DB1:MOV R6, #250
+02B7 7DFA            457             DB2:MOV R5, #250
+02B9 DDFE            458             DB3:DJNZ R5, DB3
+02BB DEFA            459                     DJNZ R6, DB2
+02BD DFF6            460                     DJNZ R7, DB1
+02BF 22              461                     RET
+02C0                 462     DELAY:
+02C0 7F04            463                     MOV R7, #4                      ; (4/20)*1 ms
+02C2 7EFA            464             D1: MOV R6, #250
+02C4 7DFA            465             D2: MOV R5, #250
+02C6 DDFE            466             D3: DJNZ R5, D3
+02C8 DEFA            467                     DJNZ R6, D2
+02CA DFF6            468                     DJNZ R7, D1
+02CC 22              469                     RET
+                     470     
+02CD                 471     MA7SEG:
+02CD C0F9A4B0        472         DB 0C0H, 0F9H, 0A4H, 0B0H, 099H, 092H, 082H, 0F8H, 080H, 090H
+02D1 999282F8                
+02D5 8090                    
+                     473     END
+A51 MACRO ASSEMBLER  FINAL                                                                12/21/2024 11:23:26 PAGE     9
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+B. . . . . . . . .  D ADDR   00F0H   A   
+BUTTON1. . . . . .  B ADDR   00B0H.2 A   
+BUTTON2. . . . . .  B ADDR   00B0H.3 A   
+BUTTON3. . . . . .  B ADDR   00B0H.4 A   
+BUTTON3_CHECKED. .  C ADDR   0066H   A   
+BUZZER . . . . . .  B ADDR   00B0H.5 A   
+BUZZER_ON. . . . .  C ADDR   02AAH   A   
+CHECKI1. . . . . .  C ADDR   0084H   A   
+CHECKI2. . . . . .  C ADDR   008BH   A   
+CHECKI3. . . . . .  C ADDR   0092H   A   
+CHECKI4. . . . . .  C ADDR   0099H   A   
+CHECKI5. . . . . .  C ADDR   00A0H   A   
+CHECK_1. . . . . .  C ADDR   0190H   A   
+CHECK_1L . . . . .  C ADDR   00E2H   A   
+CHECK_2. . . . . .  C ADDR   0196H   A   
+CHECK_2L . . . . .  C ADDR   00E8H   A   
+CHECK_3. . . . . .  C ADDR   019CH   A   
+CHECK_3L . . . . .  C ADDR   00EEH   A   
+CHECK_4. . . . . .  C ADDR   01A2H   A   
+CHECK_4L . . . . .  C ADDR   00F4H   A   
+CHECK_5. . . . . .  C ADDR   01A8H   A   
+CHECK_5L . . . . .  C ADDR   00FAH   A   
+CHECK_6. . . . . .  C ADDR   01AEH   A   
+CHECK_7. . . . . .  C ADDR   01B4H   A   
+CHECK_8. . . . . .  C ADDR   01BAH   A   
+CHECK_9. . . . . .  C ADDR   01C0H   A   
+CHECK_INDEX. . . .  C ADDR   00DAH   A   
+CHEKC_PASSWORD . .  C ADDR   0100H   A   
+CONVERT_DIGIT. . .  C ADDR   018AH   A   
+CORRECT. . . . . .  C ADDR   012CH   A   
+D1 . . . . . . . .  C ADDR   02C2H   A   
+D2 . . . . . . . .  C ADDR   02C4H   A   
+D3 . . . . . . . .  C ADDR   02C6H   A   
+DATA_7SEG. . . . .  D ADDR   0090H   A   
+DB1. . . . . . . .  C ADDR   02B5H   A   
+DB2. . . . . . . .  C ADDR   02B7H   A   
+DB3. . . . . . . .  C ADDR   02B9H   A   
+DELAY. . . . . . .  C ADDR   02C0H   A   
+DELAY_B. . . . . .  C ADDR   02B3H   A   
+DISPLAY_PASSWORD .  C ADDR   0232H   A   
+D_CLOSE. . . . . .  N NUMB   00C6H   A   
+D_OPEN . . . . . .  N NUMB   00C0H   A   
+EA . . . . . . . .  B ADDR   00A8H.7 A   
+ELOCK. . . . . . .  B ADDR   00A0H.7 A   
+END_CHECKI . . . .  C ADDR   00A5H   A   
+END_CHECKL . . . .  C ADDR   00FFH   A   
+ERROR. . . . . . .  C ADDR   01C6H   A   
+ES . . . . . . . .  B ADDR   00A8H.4 A   
+EXIT_1ISR. . . . .  C ADDR   00B9H   A   
+EXIT_ISR . . . . .  C ADDR   00D9H   A   
+IDLE_LOOP. . . . .  C ADDR   0059H   A   
+INCORRECT. . . . .  C ADDR   014BH   A   
+INDEX. . . . . . .  N NUMB   0030H   A   
+INT0_ISR . . . . .  C ADDR   006BH   A   
+INT1_ISR . . . . .  C ADDR   0079H   A   
+LED_GREEN. . . . .  B ADDR   00A0H.6 A   
+LEN. . . . . . . .  B ADDR   0090H.7 A   
+MA7SEG . . . . . .  C ADDR   02CDH   A   
+MAIN . . . . . . .  C ADDR   0025H   A   
+P1 . . . . . . . .  D ADDR   0090H   A   
+A51 MACRO ASSEMBLER  FINAL                                                                12/21/2024 11:23:26 PAGE    10
+
+P2 . . . . . . . .  D ADDR   00A0H   A   
+P3 . . . . . . . .  D ADDR   00B0H   A   
+PLED1. . . . . . .  B ADDR   00A0H.0 A   
+PLED2. . . . . . .  B ADDR   00A0H.1 A   
+PLED3. . . . . . .  B ADDR   00A0H.2 A   
+PLED4. . . . . . .  B ADDR   00A0H.3 A   
+PLED5. . . . . . .  B ADDR   00A0H.4 A   
+PLED6. . . . . . .  B ADDR   00A0H.5 A   
+RECEIVE_CHAR . . .  C ADDR   01C9H   A   
+RESET. . . . . . .  C ADDR   0158H   A   
+RETURN . . . . . .  C ADDR   0078H   A   
+RI . . . . . . . .  B ADDR   0098H.0 A   
+SBUF . . . . . . .  D ADDR   0099H   A   
+SCON . . . . . . .  D ADDR   0098H   A   
+SEG_TO_ASCII . . .  C ADDR   0171H   A   
+SEND_CHAR. . . . .  C ADDR   022AH   A   
+SEND_PASSWORD. . .  C ADDR   028BH   A   
+SEND_RESPONSE. . .  C ADDR   01D1H   A   
+TH1. . . . . . . .  D ADDR   008DH   A   
+TI . . . . . . . .  B ADDR   0098H.1 A   
+TMOD . . . . . . .  D ADDR   0089H   A   
+TR1. . . . . . . .  B ADDR   0088H.6 A   
+UART_ISR . . . . .  C ADDR   00BAH   A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)
