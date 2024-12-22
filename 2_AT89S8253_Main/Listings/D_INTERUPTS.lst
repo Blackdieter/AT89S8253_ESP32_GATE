@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/22/2024 11:55:53 PAGE     1
+=======
+A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/21/2024 21:21:15 PAGE     1
+>>>>>>> 92fb2abb60b1f40c471ebef579ecc3bb9a5f84b5
 
 
 MACRO ASSEMBLER A51 V8.2.7.0
@@ -18,6 +22,7 @@ LOC  OBJ            LINE     SOURCE
   00B2                 8     BUTTON1      BIT P3.2               ; BUTTON 1 INPUT ON PORT 3.2
   00B3                 9     BUTTON2      BIT P3.3               ; BUTTON 2 INPUT ON PORT 3.3
   00B4                10     BUTTON3          BIT P3.4                               ; BUTTON 3 INPUT ON PORT 3.4
+<<<<<<< HEAD
                       11             
   00A7                12     BUZZER       BIT P2.7
                       13             
@@ -252,6 +257,242 @@ LOC  OBJ            LINE     SOURCE
 0144 51C3            236                             ACALL DELAY
 0146 51C3            237                             ACALL DELAY
 0148 51C3            238                             ACALL DELAY
+=======
+  00B7                11     ELOCK            BIT P3.7
+  00A7                12     BUZZER       BIT P2.7
+  0097                13     LEN          BIT P1.7               ; LED ENABLE CONTROL BIT
+                      14             
+  00A0                15     PLED1            BIT P2.0
+  00A1                16     PLED2            BIT P2.1
+  00A2                17     PLED3            BIT P2.2
+  00A3                18     PLED4            BIT P2.3
+  00A4                19     PLED5            BIT P2.4
+  00A5                20     PLED6            BIT P2.5
+  00A6                21     LED_GREEN    BIT P2.6               ; GREEN LED BIT
+  00A7                22     LED_BLINK    BIT P2.7               ; RED LED BIT
+                      23             
+  0030                24     INDEX        EQU 0x30                           ; COUNT FOR NUMBER OF DIGITS ENTERED
+                      25             
+0000                  26     ORG 0000H           ; Reset vector
+0000 8023             27     SJMP MAIN           ; Jump to main program      
+0003                  28     ORG 0003H           ; External Interrupt 0 (INT0) vector
+0003 8067             29     SJMP INT0_ISR       ; Jump to INT0 interrupt service routine
+0013                  30     ORG 0013H           ; External Interrupt 1 (INT1) vector
+0013 8065             31     SJMP INT1_ISR       ; Jump to INT1 interrupt service routine
+0023                  32     ORG 23H         ; Interrupt vector for serial interrupt
+0023 01BB             33     AJMP UART_ISR 
+                      34     
+                      35     ;===============================================================
+                      36     ; Main Program
+                      37     ;===============================================================
+0025                  38     MAIN:
+0025 D297             39         SETB LEN        ; Turn on the led7seg
+0027 D2AF             40             SETB EA             ; Enable global interrupts
+                      41             
+                      42             ; SETUP UART Interrupt
+0029 758920           43             MOV TMOD, #20H ; Timer 1 in mode 2 (8-bit auto-reload)
+002C 758DFD           44         MOV TH1, #-3   ; Baud rate 9600 for 11.0592 MHz crystal
+002F 759850           45         MOV SCON, #50H ; Serial mode 1, 8-bit data, 1 stop bit, REN enabled
+0032 D28E             46         SETB TR1       ; Start Timer 1
+0034 D2AC             47             SETB ES        ; Enable serial interrupt
+                      48             
+                      49             ; SETUP external Interrupt
+0036 D2A8             50         SETB EX0            ; Enable external interrupt 0 (INT0)
+0038 D2AA             51         SETB EX1            ; Enable external interrupt 1 (INT1)
+003A C288             52              CLR IT0             ; Configure INT0 as level-triggered (low level)
+003C C28A             53         CLR IT1             ; Configure INT1 as level-triggered (low level)
+                      54             
+                      55             ; Initial default password
+003E 753132           56             MOV 0x31, #'2'
+0041 753231           57             MOV 0x32, #'1'
+A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/21/2024 21:21:15 PAGE     2
+
+0044 753330           58             MOV 0x33, #'0'
+0047 753430           59             MOV 0x34, #'0'
+004A 753530           60             MOV 0x35, #'0'
+004D 753630           61             MOV 0x36, #'0'
+                      62             
+                      63             ; CONFIGURE PINS
+0050 D2A7             64         SETB BUZZER
+0052 C2B7             65         CLR ELOCK
+0054 C2A6             66         CLR LED_GREEN                 ; TURN OFF GREEN LED INITIALLY
+                      67             
+                      68             ; DISPLAY INITIAL VALUE (8) ON 7-SEGMENT
+0056 9002CF           69             MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
+                      70         ;MOV DATA_7SEG, #D_CLOSE              ; DISPLAY THE LETTER C
+0059 7590C6           71             MOV DATA_7SEG, #D_CLOSE           ; DISPLAY THE LETTER C
+005C D297             72             SETB P1.7
+005E 753000           73         MOV INDEX, #0
+0061                  74     IDLE_LOOP:
+0061 B2A6             75             CPL LED_GREEN
+0063 51C3             76             ACALL DELAY
+                      77             ;JNB BUTTON3, BUTTON3_CHECKED
+0065 80FA             78             SJMP IDLE_LOOP
+0067                  79             BUTTON3_CHECKED:
+0067 11FF             80                     ACALL CHEKC_PASSWORD
+0069 51C3             81                     ACALL DELAY
+006B 22               82             RET
+                      83     
+                      84     ;===============================================================
+                      85     ; Interrupt Service Routines
+                      86     ;===============================================================
+                      87     
+                      88     ; INT0 Interrupt Service Routine (Accumulate the number)
+006C                  89     INT0_ISR:
+006C 51AD             90             ACALL BUZZER_ON
+006E E4               91         CLR A                          ; CLEAR ACCUMULATOR
+006F A3               92         INC DPTR                       ; INCREMENT DPTR FOR NEXT VALUE
+0070 93               93         MOVC A, @A+DPTR                ; LOAD NEXT PATTERN FROM MA7SEG
+0071 F590             94         MOV DATA_7SEG, A               ; DISPLAY NUMBER ON 7-SEGMENT
+                      95         ; CHECK IF VALUE IS NOT 0x90 (9)
+0073 B49003           96         CJNE A, #0x90, RETURN
+                      97         ; RESET DPTR TO START OF MA7SEG AFTER REACHING 9
+0076 9002CF           98         MOV DPTR, #MA7SEG-1
+0079                  99             RETURN:
+0079 32              100             RETI                ; Return from interrupt
+                     101     
+                     102     ; INT1 Interrupt Service Routine (Control the number submitted)
+007A                 103     INT1_ISR:
+007A 51AD            104             ACALL BUZZER_ON
+                     105             ; Save DATA_7SEG to the register corresponding to the value of INDEX (0-5)
+007C E530            106             MOV A, INDEX        ; Move INDEX to Accumulator for comparison
+007E B40004          107             CJNE A, #0, CHECKI1  ; Compare INDEX with 0, jump if not equal
+0081 A890            108             MOV R0, DATA_7SEG   ; If INDEX == 0, store DATA_7SEG in R0
+0083 8021            109             SJMP END_CHECKI            ; Skip remaining checks
+0085                 110             CHECKI1:
+0085 B40104          111             CJNE A, #1, CHECKI2  ; Compare INDEX with 1, jump if not equal
+0088 A990            112             MOV R1, DATA_7SEG   ; If INDEX == 1, store DATA_7SEG in R1
+008A 801A            113             SJMP END_CHECKI            ; Skip remaining checks
+008C                 114             CHECKI2:
+008C B40204          115             CJNE A, #2, CHECKI3  ; Compare INDEX with 2, jump if not equal
+008F AA90            116             MOV R2, DATA_7SEG   ; If INDEX == 2, store DATA_7SEG in R2
+0091 8013            117             SJMP END_CHECKI            ; Skip remaining checks
+0093                 118             CHECKI3:
+0093 B40304          119             CJNE A, #3, CHECKI4  ; Compare INDEX with 3, jump if not equal
+0096 AB90            120             MOV R3, DATA_7SEG   ; If INDEX == 3, store DATA_7SEG in R3
+0098 800C            121             SJMP END_CHECKI            ; Skip remaining checks
+009A                 122             CHECKI4:
+009A B40404          123             CJNE A, #4, CHECKI5  ; Compare INDEX with 4, jump if not equal
+A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/21/2024 21:21:15 PAGE     3
+
+009D AC90            124             MOV R4, DATA_7SEG   ; If INDEX == 4, store DATA_7SEG in R4
+009F 8005            125             SJMP END_CHECKI            ; Skip remaining checks
+00A1                 126             CHECKI5:
+00A1 B40502          127             CJNE A, #5, END_CHECKI     ; Compare INDEX with 5, jump to END if not equal
+00A4 AD90            128             MOV R5, DATA_7SEG   ; If INDEX == 5, store DATA_7SEG in R5
+00A6                 129             END_CHECKI:
+                     130         ; Continue with the rest of the program
+                     131             ; DISPLAY NUMBER 0 ON 7-SEGMENT
+00A6 E4              132         CLR A
+00A7 9002D0          133         MOV DPTR, #MA7SEG             ; RESET DPTR TO START OF MA7SEG
+00AA 93              134         MOVC A, @A+DPTR
+00AB F590            135         MOV DATA_7SEG, A              ; DISPLAY NEXT VALUE ON 7-SEGMENT
+00AD 11D9            136             ACALL CHECK_INDEX                         ; DISPLAY THE LED FOR SUBMITTED VALUE
+                     137         ; CHECK IF INDEX IS 6
+00AF 0530            138         INC INDEX
+00B1 E530            139         MOV A, INDEX
+00B3 B40604          140         CJNE A, #6, EXIT_1ISR              ; IF NOT, GO BACK TO LOOP
+00B6 3174            141             ACALL SEG_TO_ASCII
+                     142             ; Check with out password
+00B8 11FF            143             ACALL CHEKC_PASSWORD            
+00BA                 144             EXIT_1ISR:
+00BA 32              145             RETI                ; Return from interrupt
+                     146             
+00BB                 147     UART_ISR:
+00BB 31CC            148             ACALL RECEIVE_CHAR     ; Get character from UART
+00BD B42318          149             CJNE A, #'#', EXIT_ISR ; If not '#', exit
+                     150             ;CPL LED_RED                       ; For debug
+                     151     
+                     152             ; 'P' detected, proceed to receive next 6 characters
+00C0 31CC            153             ACALL RECEIVE_CHAR     ; Get first number
+00C2 F531            154             MOV 0x31, A              ; Store in R0
+00C4 31CC            155             ACALL RECEIVE_CHAR     ; Get second number
+00C6 F532            156             MOV 0x32, A              ; Store in R1
+00C8 31CC            157             ACALL RECEIVE_CHAR     ; Get third number
+00CA F533            158             MOV 0x33, A              ; Store in R2
+00CC 31CC            159             ACALL RECEIVE_CHAR     ; Get fourth number
+00CE F534            160             MOV     0x34, A              ; Store in R3
+00D0 31CC            161             ACALL RECEIVE_CHAR     ; Get third number
+00D2 F535            162             MOV 0x35, A              ; Store in R4
+00D4 31CC            163             ACALL RECEIVE_CHAR     ; Get fourth number
+00D6 F536            164             MOV     0x36, A              ; Store in R5
+                     165             ; Send back received numbers over UART
+                     166             ;ACALL SEND_RESPONSE
+00D8                 167             EXIT_ISR:
+                     168             ;CPL LED_GREEN ; For debug, if not P is inserted
+00D8 32              169             RETI        ; Return from interrupt
+                     170             
+                     171     ;===============================================================
+                     172     ; Logical check subrotines
+                     173     ;===============================================================
+00D9                 174             CHECK_INDEX:    ; Control the indicate led by the index
+                     175                     ; Compare index with 0
+00D9 E530            176                     MOV A, index            ; Load the value of index into the accumulator
+00DB B40003          177                     CJNE A, #0, CHECK_1L     ; If index ? 0, jump to CHECK_1
+00DE C2A0            178                     CLR PLED1               ; Set P1.2 if index = 0
+00E0 22              179                     RET                     ; Return from subroutine
+00E1                 180                     CHECK_1L:
+00E1 B40103          181                     CJNE A, #1, CHECK_2L     ; If index ? 1, jump to CHECK_2
+00E4 C2A1            182                     CLR PLED2               ; Set P1.3 if index = 1
+00E6 22              183                     RET                     ; Return from subroutine
+00E7                 184                     CHECK_2L:
+00E7 B40203          185                     CJNE A, #2, CHECK_3L     ; If index ? 2, jump to CHECK_3
+00EA C2A2            186                     CLR PLED3               ; Set P1.4 if index = 2
+00EC 22              187                     RET                     ; Return from subroutine
+00ED                 188                     CHECK_3L:
+00ED B40303          189                     CJNE A, #3, CHECK_4L     ; If index ? 2, jump to CHECK_3
+A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/21/2024 21:21:15 PAGE     4
+
+00F0 C2A3            190                     CLR PLED4               ; Set P1.4 if index = 2
+00F2 22              191                     RET                     ; Return from subroutine
+00F3                 192                     CHECK_4L:
+00F3 B40403          193                     CJNE A, #4, CHECK_5L     ; If index ? 2, jump to CHECK_3
+00F6 C2A4            194                     CLR PLED5               ; Set P1.4 if index = 2
+00F8 22              195                     RET                     ; Return from subroutine
+00F9                 196                     CHECK_5L:
+00F9 B40502          197                     CJNE A, #5, END_CHECKL   ; If index ? 3, jump to END_CHECK
+00FC C2A5            198                     CLR PLED6               ; Set P1.5 if index = 3
+00FE                 199                     END_CHECKL:
+00FE 22              200                     RET                     ; Return from subroutine
+                     201                     
+00FF                 202             CHEKC_PASSWORD: ; CHECK EACH REGISTER AGAINST PASSWORD 
+00FF 518E            203                     ACALL SEND_PASSWORD
+0101 E8              204                     MOV A, R0
+0102 8531F0          205                     MOV B,0x31
+0105 B5F044          206                     CJNE A, B, INCORRECT
+0108 E9              207                     MOV A, R1
+0109 8532F0          208                     MOV B,0x32
+010C B5F03D          209                     CJNE A, B, INCORRECT
+010F EA              210                     MOV A, R2
+0110 8533F0          211                     MOV B,0x33
+0113 B5F036          212                     CJNE A, B, INCORRECT
+0116 EB              213                     MOV A, R3
+0117 8534F0          214                     MOV B,0x34
+011A B5F02F          215                     CJNE A, B, INCORRECT
+011D EC              216                     MOV A, R4
+011E 8535F0          217                     MOV B,0x35
+0121 B5F028          218                     CJNE A, B, INCORRECT
+0124 ED              219                     MOV A, R5
+0125 8536F0          220                     MOV B,0x36
+0128 B5F021          221                     CJNE A, B, INCORRECT
+012B                 222                             CORRECT:
+012B D2B7            223                             SETB ELOCK
+012D D2A6            224                             SETB LED_GREEN               ; TURN ON GREEN LED
+012F 7590C0          225                             MOV DATA_7SEG, #D_OPEN        ; DISPLAY OPEN
+                     226                             ;ACALL DISPLAY_PASSWORD
+0132 C297            227                             CLR LEN
+0134 51AD            228                             ACALL BUZZER_ON
+0136 D297            229                             SETB LEN
+0138 51AD            230                             ACALL BUZZER_ON
+013A C297            231                             CLR LEN
+013C 51AD            232                             ACALL BUZZER_ON
+013E D297            233                             SETB LEN
+0140 C2A6            234                             CLR LED_GREEN
+0142 51C3            235                             ACALL DELAY
+0144 51C3            236                             ACALL DELAY
+0146 51C3            237                             ACALL DELAY
+0148 C2B7            238                             CLR ELOCK
+>>>>>>> 92fb2abb60b1f40c471ebef579ecc3bb9a5f84b5
 014A 800D            239                             SJMP RESET
 014C                 240                             INCORRECT:
 014C 7590C6          241                             MOV DATA_7SEG, #D_CLOSE       ; DISPLAY CLOSE
@@ -269,6 +510,7 @@ LOC  OBJ            LINE     SOURCE
 0163 7D00            253                             MOV R5, #00H  ; Set R5 to 0
 0165 753000          254                             MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
 0168 75A03F          255                             MOV P2, #0x3F                             ; TURN ON ALL SUBMITTED L
+<<<<<<< HEAD
 A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/22/2024 11:55:53 PAGE     5
 
                              ED
@@ -276,6 +518,15 @@ LOC  OBJ            LINE     SOURCE
 016D 7590C6          257                             MOV DATA_7SEG, #D_CLOSE
 0170 9002CF          258                             MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7
                              SEG -1
+=======
+A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/21/2024 21:21:15 PAGE     5
+
+                             ED
+016B 7590C6          256                             MOV DATA_7SEG, #D_CLOSE
+016E 9002CF          257                             MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7
+                             SEG -1
+0171 D2A7            258                             SETB BUZZER
+>>>>>>> 92fb2abb60b1f40c471ebef579ecc3bb9a5f84b5
 0173 22              259                     RET
                      260                     
                      261     ;===============================================================
@@ -337,7 +588,11 @@ LOC  OBJ            LINE     SOURCE
 01BD                 317                     CHECK_8:
 01BD B48003          318                     CJNE A, #080H, CHECK_9
 01C0 7438            319                     MOV A, #'8'
+<<<<<<< HEAD
 A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/22/2024 11:55:53 PAGE     6
+=======
+A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/21/2024 21:21:15 PAGE     6
+>>>>>>> 92fb2abb60b1f40c471ebef579ecc3bb9a5f84b5
 
 01C2 22              320                     RET
 01C3                 321                     CHECK_9:
@@ -405,7 +660,11 @@ LOC  OBJ            LINE     SOURCE
 022A 512D            382                     ACALL SEND_CHAR             ; Send LF via UART
 022C 22              383                     RET
                      384             
+<<<<<<< HEAD
 A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/22/2024 11:55:53 PAGE     7
+=======
+A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/21/2024 21:21:15 PAGE     7
+>>>>>>> 92fb2abb60b1f40c471ebef579ecc3bb9a5f84b5
 
 022D                 385             SEND_CHAR:
 022D F599            386                     MOV SBUF, A            ; Load A into SBUF to transmit
@@ -473,7 +732,11 @@ LOC  OBJ            LINE     SOURCE
 029B EB              447                     MOV A, R3                     ; SEND 4 OVER UART
 029C 512D            448                     ACALL SEND_CHAR
 029E EC              449                     MOV A, R4                     ; SEND 5 OVER UART
+<<<<<<< HEAD
 A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/22/2024 11:55:53 PAGE     8
+=======
+A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/21/2024 21:21:15 PAGE     8
+>>>>>>> 92fb2abb60b1f40c471ebef579ecc3bb9a5f84b5
 
 029F 512D            450                     ACALL SEND_CHAR
 02A1 ED              451                     MOV A, R5                     ; SEND 6 OVER UART
@@ -515,7 +778,11 @@ LOC  OBJ            LINE     SOURCE
 02D4 999282F8                
 02D8 8090                    
                      486     END
+<<<<<<< HEAD
 A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/22/2024 11:55:53 PAGE     9
+=======
+A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/21/2024 21:21:15 PAGE     9
+>>>>>>> 92fb2abb60b1f40c471ebef579ecc3bb9a5f84b5
 
 SYMBOL TABLE LISTING
 ------ ----- -------
@@ -536,6 +803,7 @@ CHECKI3. . . . . .  C ADDR   0093H   A
 CHECKI4. . . . . .  C ADDR   009AH   A   
 CHECKI5. . . . . .  C ADDR   00A1H   A   
 CHECK_1. . . . . .  C ADDR   0193H   A   
+<<<<<<< HEAD
 CHECK_1L . . . . .  C ADDR   00E3H   A   
 CHECK_2. . . . . .  C ADDR   0199H   A   
 CHECK_2L . . . . .  C ADDR   00E9H   A   
@@ -545,14 +813,32 @@ CHECK_4. . . . . .  C ADDR   01A5H   A
 CHECK_4L . . . . .  C ADDR   00F5H   A   
 CHECK_5. . . . . .  C ADDR   01ABH   A   
 CHECK_5L . . . . .  C ADDR   00FBH   A   
+=======
+CHECK_1L . . . . .  C ADDR   00E1H   A   
+CHECK_2. . . . . .  C ADDR   0199H   A   
+CHECK_2L . . . . .  C ADDR   00E7H   A   
+CHECK_3. . . . . .  C ADDR   019FH   A   
+CHECK_3L . . . . .  C ADDR   00EDH   A   
+CHECK_4. . . . . .  C ADDR   01A5H   A   
+CHECK_4L . . . . .  C ADDR   00F3H   A   
+CHECK_5. . . . . .  C ADDR   01ABH   A   
+CHECK_5L . . . . .  C ADDR   00F9H   A   
+>>>>>>> 92fb2abb60b1f40c471ebef579ecc3bb9a5f84b5
 CHECK_6. . . . . .  C ADDR   01B1H   A   
 CHECK_7. . . . . .  C ADDR   01B7H   A   
 CHECK_8. . . . . .  C ADDR   01BDH   A   
 CHECK_9. . . . . .  C ADDR   01C3H   A   
+<<<<<<< HEAD
 CHECK_INDEX. . . .  C ADDR   00DBH   A   
 CHEKC_PASSWORD . .  C ADDR   0101H   A   
 CONVERT_DIGIT. . .  C ADDR   018DH   A   
 CORRECT. . . . . .  C ADDR   012DH   A   
+=======
+CHECK_INDEX. . . .  C ADDR   00D9H   A   
+CHEKC_PASSWORD . .  C ADDR   00FFH   A   
+CONVERT_DIGIT. . .  C ADDR   018DH   A   
+CORRECT. . . . . .  C ADDR   012BH   A   
+>>>>>>> 92fb2abb60b1f40c471ebef579ecc3bb9a5f84b5
 D1 . . . . . . . .  C ADDR   02C5H   A   
 D2 . . . . . . . .  C ADDR   02C7H   A   
 D3 . . . . . . . .  C ADDR   02C9H   A   
@@ -568,13 +854,17 @@ D_OPEN . . . . . .  N NUMB   00C0H   A
 EA . . . . . . . .  B ADDR   00A8H.7 A   
 ELOCK. . . . . . .  B ADDR   00B0H.7 A   
 END_CHECKI . . . .  C ADDR   00A6H   A   
+<<<<<<< HEAD
 END_CHECKL . . . .  C ADDR   0100H   A   
+=======
+END_CHECKL . . . .  C ADDR   00FEH   A   
+>>>>>>> 92fb2abb60b1f40c471ebef579ecc3bb9a5f84b5
 ERROR. . . . . . .  C ADDR   01C9H   A   
 ES . . . . . . . .  B ADDR   00A8H.4 A   
 EX0. . . . . . . .  B ADDR   00A8H.0 A   
 EX1. . . . . . . .  B ADDR   00A8H.2 A   
 EXIT_1ISR. . . . .  C ADDR   00BAH   A   
-EXIT_ISR . . . . .  C ADDR   00DAH   A   
+EXIT_ISR . . . . .  C ADDR   00D8H   A   
 IDLE_LOOP. . . . .  C ADDR   0061H   A   
 INCORRECT. . . . .  C ADDR   014CH   A   
 INDEX. . . . . . .  N NUMB   0030H   A   
@@ -582,9 +872,15 @@ INT0_ISR . . . . .  C ADDR   006CH   A
 INT1_ISR . . . . .  C ADDR   007AH   A   
 IT0. . . . . . . .  B ADDR   0088H.0 A   
 IT1. . . . . . . .  B ADDR   0088H.2 A   
+<<<<<<< HEAD
 LED_GREEN. . . . .  B ADDR   00A0H.6 A   
 A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/22/2024 11:55:53 PAGE    10
+=======
+LED_BLINK. . . . .  B ADDR   00A0H.7 A   
+A51 MACRO ASSEMBLER  D_INTERUPTS                                                          12/21/2024 21:21:15 PAGE    10
+>>>>>>> 92fb2abb60b1f40c471ebef579ecc3bb9a5f84b5
 
+LED_GREEN. . . . .  B ADDR   00A0H.6 A   
 LEN. . . . . . . .  B ADDR   0090H.7 A   
 MA7SEG . . . . . .  C ADDR   02D0H   A   
 MAIN . . . . . . .  C ADDR   0025H   A   

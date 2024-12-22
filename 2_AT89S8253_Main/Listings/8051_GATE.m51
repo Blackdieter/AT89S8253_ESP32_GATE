@@ -84,7 +84,7 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   B:00A8H.0       SYMBOL        EX0
   B:00A8H.2       SYMBOL        EX1
   C:00BAH         SYMBOL        EXIT_1ISR
-  C:00DAH         SYMBOL        EXIT_ISR
+  C:00D8H         SYMBOL        EXIT_ISR
   C:0061H         SYMBOL        IDLE_LOOP
   C:014CH         SYMBOL        INCORRECT
   N:0030H         SYMBOL        INDEX
@@ -92,6 +92,7 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:007AH         SYMBOL        INT1_ISR
   B:0088H.0       SYMBOL        IT0
   B:0088H.2       SYMBOL        IT1
+  B:00A0H.7       SYMBOL        LED_BLINK
   B:00A0H.6       SYMBOL        LED_GREEN
   B:0090H.7       SYMBOL        LEN
   C:02D0H         SYMBOL        MA7SEG
@@ -118,6 +119,9 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   D:008DH         SYMBOL        TH1
   B:0098H.1       SYMBOL        TI
   D:0089H         SYMBOL        TMOD
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/21/2024  21:21:15  PAGE 3
+
+
   B:0088H.6       SYMBOL        TR1
 BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/22/2024  11:57:37  PAGE 3
 

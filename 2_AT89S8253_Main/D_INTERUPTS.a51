@@ -165,7 +165,7 @@ UART_ISR:
 	ACALL RECEIVE_CHAR     ; Get fourth number
 	MOV	0x36, A              ; Store in R5
 	; Send back received numbers over UART
-	ACALL SEND_RESPONSE
+	;ACALL SEND_RESPONSE
 	EXIT_ISR:
 	;CPL LED_GREEN ; For debug, if not P is inserted
 	RETI        ; Return from interrupt
@@ -222,9 +222,10 @@ UART_ISR:
 		MOV B,0x36
 		CJNE A, B, INCORRECT
 			CORRECT:
+			SETB ELOCK
 			SETB LED_GREEN               ; TURN ON GREEN LED
 			MOV DATA_7SEG, #D_OPEN        ; DISPLAY OPEN
-			ACALL DISPLAY_PASSWORD
+			;ACALL DISPLAY_PASSWORD
 			CLR LEN
 			ACALL BUZZER_ON
 			SETB LEN
@@ -236,6 +237,7 @@ UART_ISR:
 			ACALL DELAY
 			ACALL DELAY
 			ACALL DELAY
+			CLR ELOCK
 			SJMP RESET
 			INCORRECT:
 			MOV DATA_7SEG, #D_CLOSE       ; DISPLAY CLOSE
@@ -256,6 +258,7 @@ UART_ISR:
 			SETB BUZZER
 			MOV DATA_7SEG, #D_CLOSE
 			MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
+			SETB BUZZER
 		RET
 		
 ;===============================================================
