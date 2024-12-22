@@ -100,28 +100,44 @@ File root;
 void serialEvent() {
     static char rxBuffer[RX_BUFFER_SIZE];
     static size_t index = 0;
+    static bool readingMessage = false; // Flag to indicate if we're reading the message
+    static size_t charsToRead = 0; // Counter for characters to read
 
     while (Serial.available()) {
         char receivedChar = Serial.read();
 
-        if (index < RX_BUFFER_SIZE - 1) {
-            rxBuffer[index++] = receivedChar;
-        }
+        if (!readingMessage) {
+            // Look for the start character 'S'
+            if (receivedChar == 'S') {
+                readingMessage = true;  // Start reading the message
+                charsToRead = 6;        // Expect the next 6 characters
+                index = 0;              // Reset buffer index
+            }
+        } else {
+            // Collect the next 6 characters
+            if (charsToRead > 0) {
+                if (index < RX_BUFFER_SIZE - 1) {
+                    rxBuffer[index++] = receivedChar;
+                    charsToRead--;
+                }
+            }
 
-        if (receivedChar == '\n') { // End of line indicates a full command
-            rxBuffer[index] = '\0'; // Null-terminate the string
-            index = 0; // Reset the buffer index
+            // If all 6 characters are read, process the message
+            if (charsToRead == 0) {
+                rxBuffer[index] = '\0'; // Null-terminate the string
+                readingMessage = false; // Reset reading flag
 
-            // Check if the string starts with "s"
-            if (rxBuffer[0] == 's') {
-                takeNewPhoto = true;
-                message = String(rxBuffer).substring(1); // Extract the string after "s"
-                message.trim(); // Remove leading and trailing whitespace, including '\n'
-                Serial.println(message.c_str());
+                // Process the received message
+                String message = String(rxBuffer);
+                takeNewPhoto=true;
+                Serial.println("Received Message: " + message);
+                // Perform any additional actions with `message`
             }
         }
     }
 }
+
+
 
 void configInitCamera(){
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -379,7 +395,7 @@ void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
   
   // Serial port for debugging purposes
-  Serial.begin(115200);
+  Serial.begin(9600);
   initSPIFFS();
   // Connect to Wi-Fi
   if(!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) { 
@@ -484,7 +500,7 @@ void setup() {
         if (p->name() == PARAM_INPUT_2) { 
           input2 = p->value().c_str(); 
           Serial.print("Password Changed to: "); 
-          Serial.println("'"+ NEW_PASSWORD);
+          Serial.println("#"+ NEW_PASSWORD);
           if(USER_NAME == "admin"){
             Serial.println("Yes master, here you are!");
             writeFile(SPIFFS, input2Path, input2.c_str());
