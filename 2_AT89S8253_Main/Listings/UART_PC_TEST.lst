@@ -1,0 +1,84 @@
+A51 MACRO ASSEMBLER  UART_PC_TEST                                                         12/22/2024 10:11:11 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\UART_PC_TEST.obj
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE UART_PC_TEST.a51 SET(SMALL) DEBUG PRINT(.\Listings\UART_PC_TEST.lst) OB
+                      JECT(.\Objects\UART_PC_TEST.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+0000                   1     ORG 0000H         ; Reset vector
+0000 020030            2         LJMP MAIN     ; Jump to the main program
+                       3     
+0030                   4     ORG 0030H         ; Main program starts here
+0030                   5     MAIN:
+0030 758920            6         MOV TMOD, #20H       ; Set Timer 1 in Mode 2 (8-bit auto-reload)
+0033 758DFD            7         MOV TH1, #-3         ; Load Timer 1 to generate 9600 baud rate (assuming 11.0592 MHz cr
+                             ystal)
+0036 759850            8         MOV SCON, #50H       ; Set UART in Mode 1 (8-bit UART) and enable reception
+0039 D28E              9         SETB TR1             ; Start Timer 1
+                      10     
+                      11         ; Save numbers 1 to 6 in registers R0 to R5
+003B 7831             12         MOV R0, #'1'           ; Store 1 in R0
+003D 7932             13         MOV R1, #'2'           ; Store 2 in R1
+003F 7A33             14         MOV R2, #'3'           ; Store 3 in R2
+0041 7B34             15         MOV R3, #'4'           ; Store 4 in R3
+0043 7C35             16         MOV R4, #'5'          ; Store 5 in R4
+0045 7D36             17         MOV R5, #'6'           ; Store 6 in R5
+                      18     
+0047                  19     CHECK_PIN:
+0047 20B2FD           20         JB P3.2, CHECK_PIN   ; Wait until P3.2 is grounded (logic 0)
+                      21     
+004A 7453             22         MOV A, #'S'          ; SEND S OVER UART
+004C 116A             23         ACALL SEND_CHAR
+004E E8               24         MOV A, R0            ; SEND 1 OVER UART
+004F 116A             25         ACALL SEND_CHAR
+0051 E9               26         MOV A, R1            ; SEND 2 OVER UART
+0052 116A             27         ACALL SEND_CHAR
+0054 EA               28         MOV A, R2            ; SEND 3 OVER UART
+0055 116A             29         ACALL SEND_CHAR
+0057 EB               30         MOV A, R3            ; SEND 4 OVER UART
+0058 116A             31         ACALL SEND_CHAR
+005A EC               32         MOV A, R4            ; SEND 5 OVER UART
+005B 116A             33         ACALL SEND_CHAR
+005D ED               34         MOV A, R5            ; SEND 6 OVER UART
+005E 116A             35         ACALL SEND_CHAR
+0060 740D             36         MOV A, #0x0D         ; Load ASCII for Carriage Return (CR)
+0062 116A             37         ACALL SEND_CHAR      ; Send CR via UART
+0064 740A             38         MOV A, #0x0A         ; Load ASCII for Line Feed (LF)
+0066 116A             39         ACALL SEND_CHAR      ; Send LF via UART
+                      40     
+0068 80DD             41         SJMP CHECK_PIN       ; Go back to checking the pin
+                      42     
+006A                  43             SEND_CHAR:
+006A F599             44                     MOV SBUF, A            ; Load A into SBUF to transmit
+006C 3099FD           45                     JNB TI, $              ; Wait for transmission to complete
+006F C299             46                     CLR TI                 ; Clear transmit interrupt flag
+0071 22               47                     RET
+                      48     
+                      49     END
+A51 MACRO ASSEMBLER  UART_PC_TEST                                                         12/22/2024 10:11:11 PAGE     2
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+CHECK_PIN. . . . .  C ADDR   0047H   A   
+MAIN . . . . . . .  C ADDR   0030H   A   
+P3 . . . . . . . .  D ADDR   00B0H   A   
+SBUF . . . . . . .  D ADDR   0099H   A   
+SCON . . . . . . .  D ADDR   0098H   A   
+SEND_CHAR. . . . .  C ADDR   006AH   A   
+TH1. . . . . . . .  D ADDR   008DH   A   
+TI . . . . . . . .  B ADDR   0098H.1 A   
+TMOD . . . . . . .  D ADDR   0089H   A   
+TR1. . . . . . . .  B ADDR   0088H.6 A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)

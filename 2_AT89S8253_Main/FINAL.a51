@@ -233,6 +233,7 @@ UART_ISR:
 			ACALL BUZZER_ON
 			SJMP RESET
 			RESET:
+			SETB BUZZER
 			MOV R0, #00H  ; Set R0 to 0
 			MOV R1, #00H  ; Set R1 to 0
 			MOV R2, #00H  ; Set R2 to 0
