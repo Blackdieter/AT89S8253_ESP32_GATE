@@ -8,9 +8,7 @@ D_OPEN   	 EQU 0x0C0
 BUTTON1      BIT P3.2               ; BUTTON 1 INPUT ON PORT 3.2
 BUTTON2      BIT P3.3               ; BUTTON 2 INPUT ON PORT 3.3
 BUTTON3 	 BIT P3.4				; BUTTON 3 INPUT ON PORT 3.4
-	
 BUZZER       BIT P2.7
-	
 LEN          BIT P1.7               ; LED ENABLE CONTROL BIT
 	
 PLED1		 BIT P2.0
@@ -20,8 +18,7 @@ PLED4		 BIT P2.3
 PLED5		 BIT P2.4
 PLED6		 BIT P2.5
 LED_GREEN    BIT P2.6               ; GREEN LED BIT
-	
-ELOCK        BIT P3.7              
+ELOCK        BIT P2.7               ; RED LED BIT
 	
 INDEX        EQU 0x30				; COUNT FOR NUMBER OF DIGITS ENTERED
 	
@@ -51,7 +48,7 @@ MAIN:
 	; SETUP external Interrupt
     SETB EX0            ; Enable external interrupt 0 (INT0)
     SETB EX1            ; Enable external interrupt 1 (INT1)
-	CLR IT0             ; Configure INT0 as level-triggered (low level)
+	 CLR IT0             ; Configure INT0 as level-triggered (low level)
     CLR IT1             ; Configure INT1 as level-triggered (low level)
 	
 	; Initial default password
@@ -66,7 +63,7 @@ MAIN:
 	;ACALL DISPLAY_PASSWORD
 	
 	; CONFIGURE PINS
-    SETB BUZZER
+    CLR BUZZER
     CLR ELOCK
     CLR LED_GREEN                 ; TURN OFF GREEN LED INITIALLY
 	
@@ -261,7 +258,6 @@ UART_ISR:
 			MOV R5, #00H  ; Set R5 to 0
 			MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
 			MOV P2, #0x3F				  ; TURN ON ALL SUBMITTED LED
-			SETB BUZZER
 			MOV DATA_7SEG, #D_CLOSE
 			MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
 			SETB BUZZER
