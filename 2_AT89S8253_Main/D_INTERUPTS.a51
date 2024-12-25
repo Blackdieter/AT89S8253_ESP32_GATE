@@ -202,7 +202,6 @@ UART_ISR:
 		RET                     ; Return from subroutine
 		
 	CHEKC_PASSWORD:	; CHECK EACH REGISTER AGAINST PASSWORD 
-		ACALL SEND_PASSWORD
 		MOV A, R0
 		MOV B,0x31
 		CJNE A, B, INCORRECT
@@ -222,6 +221,7 @@ UART_ISR:
 		MOV B,0x36
 		CJNE A, B, INCORRECT
 			CORRECT:
+			ACALL SEND_CORRECT
 			SETB ELOCK
 			SETB LED_GREEN               ; TURN ON GREEN LED
 			MOV DATA_7SEG, #D_OPEN        ; DISPLAY OPEN
@@ -241,6 +241,7 @@ UART_ISR:
 			CLR ELOCK
 			SJMP RESET
 			INCORRECT:
+			ACALL SEND_PASSWORD
 			MOV DATA_7SEG, #D_CLOSE       ; DISPLAY CLOSE
 			ACALL BUZZER_ON
 			MOV DATA_7SEG, #0xFF
@@ -439,6 +440,24 @@ UART_ISR:
 		ACALL SEND_CHAR             ; Send CR via UART
 		MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
 		ACALL SEND_CHAR             ; Send LF via UART	
+		RET
+	SEND_CORRECT:
+		MOV A, #'S'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'C'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'O'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'R'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'R'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'E'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'C'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'T'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
 		RET
 ;===============================================================
 ; Delay subrotines

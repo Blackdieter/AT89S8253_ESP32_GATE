@@ -1,4 +1,4 @@
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                    12/25/2024  15:06:15  PAGE 1
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                    12/25/2024  15:56:16  PAGE 1
 
 
 BL51 BANKED LINKER/LOCATER V6.22.4.0, INVOKED BY:
@@ -20,7 +20,7 @@ LINK MAP OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
             REG     0000H     0008H     ABSOLUTE     "REG BANK 0"
 
             * * * * * * *   C O D E   M E M O R Y   * * * * * * *
-            CODE    0000H     02C0H     ABSOLUTE     
+            CODE    0000H     02E3H     ABSOLUTE     
 
 
 
@@ -36,50 +36,50 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   B:00B0H.4       SYMBOL        BUTTON3
   C:0067H         SYMBOL        BUTTON3_CHECKED
   B:00A0H.7       SYMBOL        BUZZER
-  C:0293H         SYMBOL        BUZZER_ON
+  C:02B6H         SYMBOL        BUZZER_ON
   C:0085H         SYMBOL        CHECKI1
   C:008CH         SYMBOL        CHECKI2
   C:0093H         SYMBOL        CHECKI3
   C:009AH         SYMBOL        CHECKI4
   C:00A1H         SYMBOL        CHECKI5
-  C:019DH         SYMBOL        CHECK_1
+  C:019FH         SYMBOL        CHECK_1
   C:00E3H         SYMBOL        CHECK_1L
-  C:01A3H         SYMBOL        CHECK_2
+  C:01A5H         SYMBOL        CHECK_2
   C:00E9H         SYMBOL        CHECK_2L
-  C:01A9H         SYMBOL        CHECK_3
+  C:01ABH         SYMBOL        CHECK_3
   C:00EFH         SYMBOL        CHECK_3L
-  C:01AFH         SYMBOL        CHECK_4
+  C:01B1H         SYMBOL        CHECK_4
   C:00F5H         SYMBOL        CHECK_4L
-  C:01B5H         SYMBOL        CHECK_5
+  C:01B7H         SYMBOL        CHECK_5
   C:00FBH         SYMBOL        CHECK_5L
-  C:01BBH         SYMBOL        CHECK_6
-  C:01C1H         SYMBOL        CHECK_7
-  C:01C7H         SYMBOL        CHECK_8
-  C:01CDH         SYMBOL        CHECK_9
+  C:01BDH         SYMBOL        CHECK_6
+  C:01C3H         SYMBOL        CHECK_7
+  C:01C9H         SYMBOL        CHECK_8
+  C:01CFH         SYMBOL        CHECK_9
   C:00DBH         SYMBOL        CHECK_INDEX
   C:0101H         SYMBOL        CHEKC_PASSWORD
-  C:0197H         SYMBOL        CONVERT_DIGIT
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:06:15  PAGE 2
+  C:0199H         SYMBOL        CONVERT_DIGIT
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:56:16  PAGE 2
 
 
-  C:012DH         SYMBOL        CORRECT
-  C:02ABH         SYMBOL        D1
-  C:02ADH         SYMBOL        D2
-  C:02AFH         SYMBOL        D3
+  C:012BH         SYMBOL        CORRECT
+  C:02CEH         SYMBOL        D1
+  C:02D0H         SYMBOL        D2
+  C:02D2H         SYMBOL        D3
   D:0090H         SYMBOL        DATA_7SEG
-  C:029EH         SYMBOL        DB1
-  C:02A0H         SYMBOL        DB2
-  C:02A2H         SYMBOL        DB3
-  C:02A9H         SYMBOL        DELAY
-  C:029CH         SYMBOL        DELAY_B
-  C:021BH         SYMBOL        DISPLAY_PASSWORD
+  C:02C1H         SYMBOL        DB1
+  C:02C3H         SYMBOL        DB2
+  C:02C5H         SYMBOL        DB3
+  C:02CCH         SYMBOL        DELAY
+  C:02BFH         SYMBOL        DELAY_B
+  C:021DH         SYMBOL        DISPLAY_PASSWORD
   N:00C6H         SYMBOL        D_CLOSE
   N:00C0H         SYMBOL        D_OPEN
   B:00A8H.7       SYMBOL        EA
   B:00A0H.7       SYMBOL        ELOCK
   C:00A6H         SYMBOL        END_CHECKI
   C:0100H         SYMBOL        END_CHECKL
-  C:01D3H         SYMBOL        ERROR
+  C:01D5H         SYMBOL        ERROR
   B:00A8H.4       SYMBOL        ES
   B:00A8H.0       SYMBOL        EX0
   B:00A8H.2       SYMBOL        EX1
@@ -94,7 +94,7 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   B:0088H.2       SYMBOL        IT1
   B:00A0H.6       SYMBOL        LED_GREEN
   B:0090H.7       SYMBOL        LEN
-  C:02B6H         SYMBOL        MA7SEG
+  C:02D9H         SYMBOL        MA7SEG
   C:0025H         SYMBOL        MAIN
   D:0090H         SYMBOL        P1
   D:00A0H         SYMBOL        P2
@@ -105,23 +105,24 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   B:00A0H.3       SYMBOL        PLED4
   B:00A0H.4       SYMBOL        PLED5
   B:00A0H.5       SYMBOL        PLED6
-  C:01D6H         SYMBOL        RECEIVE_CHAR
-  C:0163H         SYMBOL        RESET
+  C:01D8H         SYMBOL        RECEIVE_CHAR
+  C:0165H         SYMBOL        RESET
   C:0079H         SYMBOL        RETURN
   B:0098H.0       SYMBOL        RI
   D:0099H         SYMBOL        SBUF
   D:0098H         SYMBOL        SCON
-  C:017EH         SYMBOL        SEG_TO_ASCII
-  C:0213H         SYMBOL        SEND_CHAR
-  C:0274H         SYMBOL        SEND_PASSWORD
-  C:01DEH         SYMBOL        SEND_RESPONSE
+  C:0180H         SYMBOL        SEG_TO_ASCII
+  C:0215H         SYMBOL        SEND_CHAR
+  C:0295H         SYMBOL        SEND_CORRECT
+  C:0276H         SYMBOL        SEND_PASSWORD
+  C:01E0H         SYMBOL        SEND_RESPONSE
   D:008DH         SYMBOL        TH1
   B:0098H.1       SYMBOL        TI
   D:0089H         SYMBOL        TMOD
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:56:16  PAGE 3
+
+
   B:0088H.6       SYMBOL        TR1
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:06:15  PAGE 3
-
-
   C:00BBH         SYMBOL        UART_ISR
   C:0000H         LINE#         26
   C:0003H         LINE#         28
@@ -178,10 +179,10 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:0091H         LINE#         119
   C:0093H         LINE#         121
   C:0096H         LINE#         122
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:56:16  PAGE 4
+
+
   C:0098H         LINE#         123
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:06:15  PAGE 4
-
-
   C:009AH         LINE#         125
   C:009DH         LINE#         126
   C:009FH         LINE#         127
@@ -234,27 +235,27 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:00FEH         LINE#         200
   C:0100H         LINE#         202
   C:0101H         LINE#         205
-  C:0103H         LINE#         206
-  C:0104H         LINE#         207
-  C:0107H         LINE#         208
-  C:010AH         LINE#         209
-  C:010BH         LINE#         210
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:06:15  PAGE 5
+  C:0102H         LINE#         206
+  C:0105H         LINE#         207
+  C:0108H         LINE#         208
+  C:0109H         LINE#         209
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:56:16  PAGE 5
 
 
-  C:010EH         LINE#         211
-  C:0111H         LINE#         212
-  C:0112H         LINE#         213
-  C:0115H         LINE#         214
-  C:0118H         LINE#         215
-  C:0119H         LINE#         216
-  C:011CH         LINE#         217
-  C:011FH         LINE#         218
-  C:0120H         LINE#         219
-  C:0123H         LINE#         220
-  C:0126H         LINE#         221
-  C:0127H         LINE#         222
-  C:012AH         LINE#         223
+  C:010CH         LINE#         210
+  C:010FH         LINE#         211
+  C:0110H         LINE#         212
+  C:0113H         LINE#         213
+  C:0116H         LINE#         214
+  C:0117H         LINE#         215
+  C:011AH         LINE#         216
+  C:011DH         LINE#         217
+  C:011EH         LINE#         218
+  C:0121H         LINE#         219
+  C:0124H         LINE#         220
+  C:0125H         LINE#         221
+  C:0128H         LINE#         222
+  C:012BH         LINE#         224
   C:012DH         LINE#         225
   C:012FH         LINE#         226
   C:0131H         LINE#         227
@@ -273,82 +274,82 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:0150H         LINE#         241
   C:0152H         LINE#         242
   C:0154H         LINE#         244
-  C:0157H         LINE#         245
+  C:0156H         LINE#         245
   C:0159H         LINE#         246
-  C:015CH         LINE#         247
+  C:015BH         LINE#         247
   C:015EH         LINE#         248
-  C:0161H         LINE#         249
-  C:0163H         LINE#         251
+  C:0160H         LINE#         249
+  C:0163H         LINE#         250
   C:0165H         LINE#         252
   C:0167H         LINE#         253
   C:0169H         LINE#         254
   C:016BH         LINE#         255
   C:016DH         LINE#         256
   C:016FH         LINE#         257
-  C:0172H         LINE#         258
-  C:0175H         LINE#         259
-  C:0178H         LINE#         260
-  C:017BH         LINE#         261
+  C:0171H         LINE#         258
+  C:0174H         LINE#         259
+  C:0177H         LINE#         260
+  C:017AH         LINE#         261
   C:017DH         LINE#         262
-  C:017EH         LINE#         268
-  C:017FH         LINE#         269
+  C:017FH         LINE#         263
+  C:0180H         LINE#         269
   C:0181H         LINE#         270
-  C:0182H         LINE#         271
-  C:0183H         LINE#         272
+  C:0183H         LINE#         271
+  C:0184H         LINE#         272
   C:0185H         LINE#         273
-  C:0186H         LINE#         274
-  C:0187H         LINE#         275
+  C:0187H         LINE#         274
+  C:0188H         LINE#         275
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:56:16  PAGE 6
+
+
   C:0189H         LINE#         276
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:06:15  PAGE 6
-
-
-  C:018AH         LINE#         277
-  C:018BH         LINE#         278
+  C:018BH         LINE#         277
+  C:018CH         LINE#         278
   C:018DH         LINE#         279
-  C:018EH         LINE#         280
-  C:018FH         LINE#         281
+  C:018FH         LINE#         280
+  C:0190H         LINE#         281
   C:0191H         LINE#         282
-  C:0192H         LINE#         283
-  C:0193H         LINE#         284
+  C:0193H         LINE#         283
+  C:0194H         LINE#         284
   C:0195H         LINE#         285
-  C:0196H         LINE#         286
-  C:0197H         LINE#         289
-  C:019AH         LINE#         290
+  C:0197H         LINE#         286
+  C:0198H         LINE#         287
+  C:0199H         LINE#         290
   C:019CH         LINE#         291
-  C:019DH         LINE#         293
-  C:01A0H         LINE#         294
+  C:019EH         LINE#         292
+  C:019FH         LINE#         294
   C:01A2H         LINE#         295
-  C:01A3H         LINE#         297
-  C:01A6H         LINE#         298
+  C:01A4H         LINE#         296
+  C:01A5H         LINE#         298
   C:01A8H         LINE#         299
-  C:01A9H         LINE#         301
-  C:01ACH         LINE#         302
+  C:01AAH         LINE#         300
+  C:01ABH         LINE#         302
   C:01AEH         LINE#         303
-  C:01AFH         LINE#         305
-  C:01B2H         LINE#         306
+  C:01B0H         LINE#         304
+  C:01B1H         LINE#         306
   C:01B4H         LINE#         307
-  C:01B5H         LINE#         309
-  C:01B8H         LINE#         310
+  C:01B6H         LINE#         308
+  C:01B7H         LINE#         310
   C:01BAH         LINE#         311
-  C:01BBH         LINE#         313
-  C:01BEH         LINE#         314
+  C:01BCH         LINE#         312
+  C:01BDH         LINE#         314
   C:01C0H         LINE#         315
-  C:01C1H         LINE#         317
-  C:01C4H         LINE#         318
+  C:01C2H         LINE#         316
+  C:01C3H         LINE#         318
   C:01C6H         LINE#         319
-  C:01C7H         LINE#         321
-  C:01CAH         LINE#         322
+  C:01C8H         LINE#         320
+  C:01C9H         LINE#         322
   C:01CCH         LINE#         323
-  C:01CDH         LINE#         325
-  C:01D0H         LINE#         326
+  C:01CEH         LINE#         324
+  C:01CFH         LINE#         326
   C:01D2H         LINE#         327
-  C:01D3H         LINE#         329
+  C:01D4H         LINE#         328
   C:01D5H         LINE#         330
-  C:01D6H         LINE#         336
-  C:01D9H         LINE#         337
+  C:01D7H         LINE#         331
+  C:01D8H         LINE#         337
   C:01DBH         LINE#         338
   C:01DDH         LINE#         339
-  C:01DEH         LINE#         342
+  C:01DFH         LINE#         340
   C:01E0H         LINE#         343
   C:01E2H         LINE#         344
   C:01E4H         LINE#         345
@@ -358,10 +359,10 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:01ECH         LINE#         349
   C:01EEH         LINE#         350
   C:01F0H         LINE#         351
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:56:16  PAGE 7
+
+
   C:01F2H         LINE#         352
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:06:15  PAGE 7
-
-
   C:01F4H         LINE#         353
   C:01F6H         LINE#         354
   C:01F8H         LINE#         355
@@ -378,11 +379,11 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:020EH         LINE#         366
   C:0210H         LINE#         367
   C:0212H         LINE#         368
-  C:0213H         LINE#         371
+  C:0214H         LINE#         369
   C:0215H         LINE#         372
-  C:0218H         LINE#         373
+  C:0217H         LINE#         373
   C:021AH         LINE#         374
-  C:021BH         LINE#         377
+  C:021CH         LINE#         375
   C:021DH         LINE#         378
   C:021FH         LINE#         379
   C:0221H         LINE#         380
@@ -418,10 +419,10 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:025DH         LINE#         410
   C:025FH         LINE#         411
   C:0261H         LINE#         412
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:56:16  PAGE 8
+
+
   C:0263H         LINE#         413
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:06:15  PAGE 8
-
-
   C:0265H         LINE#         414
   C:0267H         LINE#         415
   C:0269H         LINE#         416
@@ -430,49 +431,70 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:026FH         LINE#         419
   C:0271H         LINE#         420
   C:0273H         LINE#         421
-  C:0274H         LINE#         424
+  C:0275H         LINE#         422
   C:0276H         LINE#         425
   C:0278H         LINE#         426
-  C:0279H         LINE#         427
+  C:027AH         LINE#         427
   C:027BH         LINE#         428
-  C:027CH         LINE#         429
+  C:027DH         LINE#         429
   C:027EH         LINE#         430
-  C:027FH         LINE#         431
+  C:0280H         LINE#         431
   C:0281H         LINE#         432
-  C:0282H         LINE#         433
+  C:0283H         LINE#         433
   C:0284H         LINE#         434
-  C:0285H         LINE#         435
+  C:0286H         LINE#         435
   C:0287H         LINE#         436
-  C:0288H         LINE#         437
+  C:0289H         LINE#         437
   C:028AH         LINE#         438
   C:028CH         LINE#         439
   C:028EH         LINE#         440
   C:0290H         LINE#         441
   C:0292H         LINE#         442
-  C:0293H         LINE#         447
-  C:0295H         LINE#         448
-  C:0297H         LINE#         449
-  C:0299H         LINE#         450
-  C:029BH         LINE#         451
-  C:029CH         LINE#         453
-  C:029EH         LINE#         454
-  C:02A0H         LINE#         455
-  C:02A2H         LINE#         456
-  C:02A4H         LINE#         457
-  C:02A6H         LINE#         458
-  C:02A8H         LINE#         459
-  C:02A9H         LINE#         461
-  C:02ABH         LINE#         462
-  C:02ADH         LINE#         463
-  C:02AFH         LINE#         464
-  C:02B1H         LINE#         465
-  C:02B3H         LINE#         466
-  C:02B5H         LINE#         467
+  C:0294H         LINE#         443
+  C:0295H         LINE#         445
+  C:0297H         LINE#         446
+  C:0299H         LINE#         447
+  C:029BH         LINE#         448
+  C:029DH         LINE#         449
+  C:029FH         LINE#         450
+  C:02A1H         LINE#         451
+  C:02A3H         LINE#         452
+  C:02A5H         LINE#         453
+  C:02A7H         LINE#         454
+  C:02A9H         LINE#         455
+  C:02ABH         LINE#         456
+  C:02ADH         LINE#         457
+  C:02AFH         LINE#         458
+  C:02B1H         LINE#         459
+  C:02B3H         LINE#         460
+  C:02B5H         LINE#         461
+  C:02B6H         LINE#         466
+  C:02B8H         LINE#         467
+  C:02BAH         LINE#         468
+  C:02BCH         LINE#         469
+  C:02BEH         LINE#         470
+  C:02BFH         LINE#         472
+  C:02C1H         LINE#         473
+  C:02C3H         LINE#         474
+  C:02C5H         LINE#         475
+  C:02C7H         LINE#         476
+  C:02C9H         LINE#         477
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  15:56:16  PAGE 9
+
+
+  C:02CBH         LINE#         478
+  C:02CCH         LINE#         480
+  C:02CEH         LINE#         481
+  C:02D0H         LINE#         482
+  C:02D2H         LINE#         483
+  C:02D4H         LINE#         484
+  C:02D6H         LINE#         485
+  C:02D8H         LINE#         486
   -------         ENDMOD        D_INTERUPTS
 
 ******************************************************************************
-* RESTRICTED VERSION WITH 0800H BYTE CODE SIZE LIMIT; USED: 02A3H BYTE (32%) *
+* RESTRICTED VERSION WITH 0800H BYTE CODE SIZE LIMIT; USED: 02C6H BYTE (34%) *
 ******************************************************************************
 
-Program Size: data=8.0 xdata=0 code=704
+Program Size: data=8.0 xdata=0 code=739
 LINK/LOCATE RUN COMPLETE.  0 WARNING(S),  0 ERROR(S)
