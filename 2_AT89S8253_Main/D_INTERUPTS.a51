@@ -63,10 +63,10 @@ MAIN:
 	;ACALL DISPLAY_PASSWORD
 	
 	; CONFIGURE PINS
-    CLR BUZZER
     CLR ELOCK
     CLR LED_GREEN                 ; TURN OFF GREEN LED INITIALLY
-	
+	SETB BUZZER
+
 	; DISPLAY INITIAL VALUE (8) ON 7-SEGMENT
 	MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
     ;MOV DATA_7SEG, #D_CLOSE		  ; DISPLAY THE LETTER C
@@ -165,7 +165,7 @@ UART_ISR:
 	ACALL RECEIVE_CHAR     ; Get fourth number
 	MOV	0x36, A              ; Store in R5
 	; Send back received numbers over UART
-	;ACALL SEND_RESPONSE
+	ACALL SEND_RESPONSE
 	EXIT_ISR:
 	;CPL LED_GREEN ; For debug, if not P is inserted
 	RETI        ; Return from interrupt
@@ -202,9 +202,6 @@ UART_ISR:
 		RET                     ; Return from subroutine
 		
 	CHEKC_PASSWORD:	; CHECK EACH REGISTER AGAINST PASSWORD 
-		ACALL SEND_PASSWORD
-		ACALL SEND_PASSWORD
-		ACALL SEND_PASSWORD
 		ACALL SEND_PASSWORD
 		MOV A, R0
 		MOV B,0x31
@@ -346,24 +343,6 @@ UART_ISR:
 		MOV A, #'E'                 ; Load ASCII of 'E' into A
 		ACALL SEND_CHAR             ; Send character via UART
 		MOV A, #'W'                 ; Load ASCII of 'W' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #' '                 ; Load ASCII of space into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'P'                 ; Load ASCII of 'P' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'A'                 ; Load ASCII of 'A' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'S'                 ; Load ASCII of 'S' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'S'                 ; Load ASCII of 'S' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'W'                 ; Load ASCII of 'W' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'O'                 ; Load ASCII of 'O' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'R'                 ; Load ASCII of 'R' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'D'                 ; Load ASCII of 'D' into A
 		ACALL SEND_CHAR             ; Send character via UART
 		MOV A, #':'                 ; Load ASCII of ':' into A
 		ACALL SEND_CHAR             ; Send character via UART
