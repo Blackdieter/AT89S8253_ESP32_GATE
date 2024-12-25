@@ -128,7 +128,7 @@ void serialEvent() {
                 readingMessage = false; // Reset reading flag
 
                 // Process the received message
-                String message = String(rxBuffer);
+                message = String(rxBuffer);
                 takeNewPhoto=true;
                 Serial.println("Received Message: " + message);
                 // Perform any additional actions with `message`
