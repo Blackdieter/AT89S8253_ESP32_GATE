@@ -340,32 +340,20 @@ UART_ISR:
 		RET
 	
 	SEND_RESPONSE:
-		MOV A, #'N'                 ; Load ASCII of 'N' into A
+		MOV A, #'S'                 ; Load ASCII of 'N' into A
 		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'E'                 ; Load ASCII of 'E' into A
+		MOV A, #'N'                 ; Load ASCII of 'E' into A
 		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'W'                 ; Load ASCII of 'W' into A
+		MOV A, #'E'                 ; Load ASCII of 'W' into A
 		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #':'                 ; Load ASCII of ':' into A
+		MOV A, #'W'                 ; Load ASCII of ':' into A
 		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #' '                 ; Load ASCII of space into A
+		MOV A, #'%'                 ; Load ASCII of space into A
 		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, 0x31              ; Load first digit
+		MOV A, #'%'              ; Load first digit
 		ACALL SEND_CHAR        ; Send character
-		MOV A, 0x32              ; Load second digit
-		ACALL SEND_CHAR        ; Send character
-		MOV A, 0x33            ; Load third digit
-		ACALL SEND_CHAR        ; Send character
-		MOV A, 0x34              ; Load fourth digit
-		ACALL SEND_CHAR        ; Send character	
-		MOV A, 0x35              ; Load fourth digit
-		ACALL SEND_CHAR        ; Send character
-		MOV A, 0x36              ; Load fourth digit
-		ACALL SEND_CHAR        ; Send character
-		MOV A, #0x0D                ; Load ASCII for Carriage Return (CR)		
-		ACALL SEND_CHAR             ; Send CR via UART
-		MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
-		ACALL SEND_CHAR             ; Send LF via UART
+		MOV A, #'%'              ; Load second digit
+		ACALL SEND_CHAR        ; Send charactet
 		RET
 	
 	SEND_CHAR:
@@ -444,19 +432,17 @@ UART_ISR:
 	SEND_CORRECT:
 		MOV A, #'S'                    ; SEND S OVER UART
 		ACALL SEND_CHAR
+		MOV A, #'%'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
 		MOV A, #'C'                    ; SEND S OVER UART
 		ACALL SEND_CHAR
-		MOV A, #'O'                    ; SEND S OVER UART
-		ACALL SEND_CHAR
 		MOV A, #'R'                    ; SEND S OVER UART
-		ACALL SEND_CHAR
-		MOV A, #'R'                    ; SEND S OVER UART
-		ACALL SEND_CHAR
-		MOV A, #'E'                    ; SEND S OVER UART
 		ACALL SEND_CHAR
 		MOV A, #'C'                    ; SEND S OVER UART
 		ACALL SEND_CHAR
 		MOV A, #'T'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'%'                    ; SEND S OVER UART
 		ACALL SEND_CHAR
 		RET
 ;===============================================================
