@@ -1,4 +1,4 @@
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                    12/25/2024  16:08:04  PAGE 1
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                    12/30/2024  15:30:30  PAGE 1
 
 
 BL51 BANKED LINKER/LOCATER V6.22.4.0, INVOKED BY:
@@ -59,7 +59,7 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:00DBH         SYMBOL        CHECK_INDEX
   C:0101H         SYMBOL        CHEKC_PASSWORD
   C:0199H         SYMBOL        CONVERT_DIGIT
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  16:08:04  PAGE 2
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/30/2024  15:30:30  PAGE 2
 
 
   C:012BH         SYMBOL        CORRECT
@@ -119,7 +119,7 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   D:008DH         SYMBOL        TH1
   B:0098H.1       SYMBOL        TI
   D:0089H         SYMBOL        TMOD
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  16:08:04  PAGE 3
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/30/2024  15:30:30  PAGE 3
 
 
   B:0088H.6       SYMBOL        TR1
@@ -179,7 +179,7 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:0091H         LINE#         119
   C:0093H         LINE#         121
   C:0096H         LINE#         122
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  16:08:04  PAGE 4
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/30/2024  15:30:30  PAGE 4
 
 
   C:0098H         LINE#         123
@@ -239,7 +239,7 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:0105H         LINE#         207
   C:0108H         LINE#         208
   C:0109H         LINE#         209
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  16:08:04  PAGE 5
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/30/2024  15:30:30  PAGE 5
 
 
   C:010CH         LINE#         210
@@ -299,7 +299,7 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:0185H         LINE#         273
   C:0187H         LINE#         274
   C:0188H         LINE#         275
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  16:08:04  PAGE 6
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/30/2024  15:30:30  PAGE 6
 
 
   C:0189H         LINE#         276
@@ -359,7 +359,7 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:01ECH         LINE#         349
   C:01EEH         LINE#         350
   C:01F0H         LINE#         351
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  16:08:04  PAGE 7
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/30/2024  15:30:30  PAGE 7
 
 
   C:01F2H         LINE#         352
@@ -419,7 +419,7 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
   C:025DH         LINE#         410
   C:025EH         LINE#         413
   C:0260H         LINE#         414
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  16:08:04  PAGE 8
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/30/2024  15:30:30  PAGE 8
 
 
   C:0262H         LINE#         415
@@ -479,7 +479,7 @@ SYMBOL TABLE OF MODULE:  .\Objects\8051_GATE (D_INTERUPTS)
 * RESTRICTED VERSION WITH 0800H BYTE CODE SIZE LIMIT; USED: 02AAH BYTE (33%) *
 ******************************************************************************
 
-BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/25/2024  16:08:04  PAGE 9
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  12/30/2024  15:30:30  PAGE 9
 
 
 Program Size: data=8.0 xdata=0 code=711
