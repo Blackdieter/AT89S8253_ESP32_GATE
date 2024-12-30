@@ -1,14 +1,25 @@
 ;===============================================================
 ; 8051 External Interrupts to Control LED on P2.6
 ;===============================================================
-DATA_7SEG    EQU P0                 ; 7-SEGMENT DISPLAY CONNECTED TO PORT 0
-LED1         BIT P2.2               ; LED1 CONTROL BIT
-LED2         BIT P2.3               ; LED2 CONTROL BIT FOR ENABLING THE 2ND 7-SEGMENT
+DATA_7SEG    EQU P1                 ; 7-SEGMENT DISPLAY CONNECTED TO PORT 0
+D_CLOSE 	 EQU 0x0C6
+D_OPEN   	 EQU 0x0C0
+	
 BUTTON1      BIT P3.2               ; BUTTON 1 INPUT ON PORT 3.2
 BUTTON2      BIT P3.3               ; BUTTON 2 INPUT ON PORT 3.3
+BUTTON3 	 BIT P3.4				; BUTTON 3 INPUT ON PORT 3.4
+BUZZER       BIT P2.7
+LEN          BIT P1.7               ; LED ENABLE CONTROL BIT
+	
+PLED1		 BIT P2.0
+PLED2		 BIT P2.1
+PLED3		 BIT P2.2
+PLED4		 BIT P2.3
+PLED5		 BIT P2.4
+PLED6		 BIT P2.5
 LED_GREEN    BIT P2.6               ; GREEN LED BIT
-LED_RED      BIT P2.7               ; RED LED BIT
-BUZZER       BIT P2.4
+ELOCK        BIT P2.7               ; RED LED BIT
+	
 INDEX        EQU 0x30				; COUNT FOR NUMBER OF DIGITS ENTERED
 	
 ORG 0000H           ; Reset vector
@@ -20,12 +31,11 @@ SJMP INT1_ISR       ; Jump to INT1 interrupt service routine
 ORG 23H         ; Interrupt vector for serial interrupt
 AJMP UART_ISR 
 
-
 ;===============================================================
 ; Main Program
 ;===============================================================
 MAIN:
-    MOV P2, #00H        ; Clear all LEDs on port 2 (initialize)
+    SETB LEN        ; Turn on the led7seg
 	SETB EA             ; Enable global interrupts
 	
 	; SETUP UART Interrupt
@@ -38,8 +48,8 @@ MAIN:
 	; SETUP external Interrupt
     SETB EX0            ; Enable external interrupt 0 (INT0)
     SETB EX1            ; Enable external interrupt 1 (INT1)
-    SETB IT0            ; Configure INT0 as edge-triggered (falling edge)
-    SETB IT1            ; Configure INT1 as edge-triggered (falling edge)
+	 CLR IT0             ; Configure INT0 as level-triggered (low level)
+    CLR IT1             ; Configure INT1 as level-triggered (low level)
 	
 	; Initial default password
 	MOV 0x31, #'2'
@@ -48,21 +58,30 @@ MAIN:
 	MOV 0x34, #'0'
 	MOV 0x35, #'0'
 	MOV 0x36, #'0'
+	;ACALL DISPLAY_PASSWORD
+	;ACALL DISPLAY_PASSWORD
+	;ACALL DISPLAY_PASSWORD
 	
 	; CONFIGURE PINS
-    CLR BUZZER
-    CLR LED_RED
+    CLR ELOCK
     CLR LED_GREEN                 ; TURN OFF GREEN LED INITIALLY
-	
+	SETB BUZZER
+
 	; DISPLAY INITIAL VALUE (8) ON 7-SEGMENT
 	MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
-    MOV DATA_7SEG, #0x89
+    ;MOV DATA_7SEG, #D_CLOSE		  ; DISPLAY THE LETTER C
+	MOV DATA_7SEG, #D_CLOSE		  ; DISPLAY THE LETTER C
+	SETB P1.7
     MOV INDEX, #0
-	SETB LED2
 IDLE_LOOP:
-	CPL P3.4
+	CPL LED_GREEN
 	ACALL DELAY
-    SJMP IDLE_LOOP      ; Stay in an idle loop, waiting for interrupts
+	;JNB BUTTON3, BUTTON3_CHECKED
+	SJMP IDLE_LOOP
+	BUTTON3_CHECKED:
+		ACALL CHEKC_PASSWORD
+		ACALL DELAY
+	RET
 
 ;===============================================================
 ; Interrupt Service Routines
@@ -70,7 +89,7 @@ IDLE_LOOP:
 
 ; INT0 Interrupt Service Routine (Accumulate the number)
 INT0_ISR:
-	;ACALL BUZZER_ON
+	ACALL BUZZER_ON
     CLR A                          ; CLEAR ACCUMULATOR
     INC DPTR                       ; INCREMENT DPTR FOR NEXT VALUE
     MOVC A, @A+DPTR                ; LOAD NEXT PATTERN FROM MA7SEG
@@ -84,48 +103,44 @@ INT0_ISR:
 
 ; INT1 Interrupt Service Routine (Control the number submitted)
 INT1_ISR:
-	;ACALL BUZZER_ON
-    ; SHIFT NUMBERS IN REGISTERS TO MAKE ROOM FOR NEW VALUE IN R0
-    MOV A, R4
-    MOV R5, A                     ; MOVE PREVIOUS R4 TO R5
-    MOV A, R3
-    MOV R4, A                     ; MOVE PREVIOUS R3 TO R4
-    MOV A, R2
-    MOV R3, A                     ; MOVE PREVIOUS R2 TO R3
-    MOV A, R1
-    MOV R2, A                     ; MOVE PREVIOUS R1 TO R2
-    MOV A, R0
-    MOV R1, A                     ; MOVE PREVIOUS R0 TO R1
-    MOV R0, DATA_7SEG             ; STORE NEW NUMBER IN R0
+	ACALL BUZZER_ON
+	; Save DATA_7SEG to the register corresponding to the value of INDEX (0-5)
+	MOV A, INDEX        ; Move INDEX to Accumulator for comparison
+	CJNE A, #0, CHECKI1  ; Compare INDEX with 0, jump if not equal
+	MOV R0, DATA_7SEG   ; If INDEX == 0, store DATA_7SEG in R0
+	SJMP END_CHECKI            ; Skip remaining checks
+	CHECKI1:
+	CJNE A, #1, CHECKI2  ; Compare INDEX with 1, jump if not equal
+	MOV R1, DATA_7SEG   ; If INDEX == 1, store DATA_7SEG in R1
+	SJMP END_CHECKI            ; Skip remaining checks
+	CHECKI2:
+	CJNE A, #2, CHECKI3  ; Compare INDEX with 2, jump if not equal
+	MOV R2, DATA_7SEG   ; If INDEX == 2, store DATA_7SEG in R2
+	SJMP END_CHECKI            ; Skip remaining checks
+	CHECKI3:
+	CJNE A, #3, CHECKI4  ; Compare INDEX with 3, jump if not equal
+	MOV R3, DATA_7SEG   ; If INDEX == 3, store DATA_7SEG in R3
+	SJMP END_CHECKI            ; Skip remaining checks
+	CHECKI4:
+	CJNE A, #4, CHECKI5  ; Compare INDEX with 4, jump if not equal
+	MOV R4, DATA_7SEG   ; If INDEX == 4, store DATA_7SEG in R4
+	SJMP END_CHECKI            ; Skip remaining checks
+	CHECKI5:
+	CJNE A, #5, END_CHECKI     ; Compare INDEX with 5, jump to END if not equal
+	MOV R5, DATA_7SEG   ; If INDEX == 5, store DATA_7SEG in R5
+	END_CHECKI:
+    ; Continue with the rest of the program
 	; DISPLAY NUMBER 0 ON 7-SEGMENT
     CLR A
     MOV DPTR, #MA7SEG             ; RESET DPTR TO START OF MA7SEG
     MOVC A, @A+DPTR
     MOV DATA_7SEG, A              ; DISPLAY NEXT VALUE ON 7-SEGMENT
 	ACALL CHECK_INDEX			  ; DISPLAY THE LED FOR SUBMITTED VALUE
-	CPL LED_RED                   ; Turn OFF LED connected to P2.6
     ; CHECK IF INDEX IS 6
     INC INDEX
     MOV A, INDEX
     CJNE A, #6, EXIT_1ISR              ; IF NOT, GO BACK TO LOOP
 	ACALL SEG_TO_ASCII
-    ; TRANSMIT "****" AS STRING OVER UART
-	MOV A, R5                     ; SEND 1 OVER UART
-    ACALL SEND_CHAR
-    MOV A, R4                     ; SEND 2 OVER UART
-    ACALL SEND_CHAR
-    MOV A, R3                     ; SEND 3 OVER UART
-    ACALL SEND_CHAR
-    MOV A, R2                     ; SEND 4 OVER UART
-    ACALL SEND_CHAR
-    MOV A, R1                     ; SEND 5 OVER UART
-    ACALL SEND_CHAR
-    MOV A, R0                     ; SEND 6 OVER UART
-    ACALL SEND_CHAR
-	MOV A, #0x0D                ; Load ASCII for Carriage Return (CR)		
-	ACALL SEND_CHAR             ; Send CR via UART
-	MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
-	ACALL SEND_CHAR             ; Send LF via UART
 	; Check with out password
 	ACALL CHEKC_PASSWORD		
 	EXIT_1ISR:
@@ -133,10 +148,10 @@ INT1_ISR:
 	
 UART_ISR:
 	ACALL RECEIVE_CHAR     ; Get character from UART
-	CJNE A, #'P', EXIT_ISR ; If not 'P', exit
+	CJNE A, #'#', EXIT_ISR ; If not '#', exit
 	;CPL LED_RED			   ; For debug
 
-	; 'P' detected, proceed to receive next 4 characters
+	; 'P' detected, proceed to receive next 6 characters
 	ACALL RECEIVE_CHAR     ; Get first number
 	MOV 0x31, A              ; Store in R0
 	ACALL RECEIVE_CHAR     ; Get second number
@@ -162,68 +177,89 @@ UART_ISR:
 		; Compare index with 0
 		MOV A, index            ; Load the value of index into the accumulator
 		CJNE A, #0, CHECK_1L     ; If index ? 0, jump to CHECK_1
-		CLR P1.2               ; Set P1.2 if index = 0
+		CLR PLED1               ; Set P1.2 if index = 0
 		RET                     ; Return from subroutine
 		CHECK_1L:
 		CJNE A, #1, CHECK_2L     ; If index ? 1, jump to CHECK_2
-		CLR P1.3               ; Set P1.3 if index = 1
+		CLR PLED2               ; Set P1.3 if index = 1
 		RET                     ; Return from subroutine
 		CHECK_2L:
 		CJNE A, #2, CHECK_3L     ; If index ? 2, jump to CHECK_3
-		CLR P1.4               ; Set P1.4 if index = 2
+		CLR PLED3               ; Set P1.4 if index = 2
 		RET                     ; Return from subroutine
 		CHECK_3L:
 		CJNE A, #3, CHECK_4L     ; If index ? 2, jump to CHECK_3
-		CLR P1.5               ; Set P1.4 if index = 2
+		CLR PLED4               ; Set P1.4 if index = 2
 		RET                     ; Return from subroutine
 		CHECK_4L:
 		CJNE A, #4, CHECK_5L     ; If index ? 2, jump to CHECK_3
-		CLR P1.6               ; Set P1.4 if index = 2
+		CLR PLED5               ; Set P1.4 if index = 2
 		RET                     ; Return from subroutine
 		CHECK_5L:
 		CJNE A, #5, END_CHECKL   ; If index ? 3, jump to END_CHECK
-		CLR P1.7               ; Set P1.5 if index = 3
+		CLR PLED6               ; Set P1.5 if index = 3
 		END_CHECKL:
 		RET                     ; Return from subroutine
 		
-	CHEKC_PASSWORD:	; CHECK EACH REGISTER AGAINST PASSWORD  
-		MOV A, R5
+	CHEKC_PASSWORD:	; CHECK EACH REGISTER AGAINST PASSWORD 
+		MOV A, R0
 		MOV B,0x31
 		CJNE A, B, INCORRECT
-		MOV A, R4
+		MOV A, R1
 		MOV B,0x32
 		CJNE A, B, INCORRECT
-		MOV A, R3
+		MOV A, R2
 		MOV B,0x33
 		CJNE A, B, INCORRECT
-		MOV A, R2
+		MOV A, R3
 		MOV B,0x34
 		CJNE A, B, INCORRECT
-		MOV A, R1
+		MOV A, R4
 		MOV B,0x35
 		CJNE A, B, INCORRECT
-		MOV A, R0
+		MOV A, R5
 		MOV B,0x36
 		CJNE A, B, INCORRECT
 			CORRECT:
-			CLR LED_RED                  ; TURN OFF RED LED
+			ACALL SEND_CORRECT
+			SETB ELOCK
 			SETB LED_GREEN               ; TURN ON GREEN LED
-			ACALL DISPLAY_PASSWORD
+			MOV DATA_7SEG, #D_OPEN        ; DISPLAY OPEN
 			ACALL BUZZER_ON
+			;ACALL DISPLAY_PASSWORD
+			MOV DATA_7SEG, #0xFF
 			ACALL BUZZER_ON
+			MOV DATA_7SEG, #D_OPEN        ; DISPLAY OPEN
 			ACALL BUZZER_ON
+			MOV DATA_7SEG, #0xFF
+			ACALL BUZZER_ON
+			MOV DATA_7SEG, #D_OPEN        ; DISPLAY OPEN
+			CLR LED_GREEN
+			ACALL DELAY
+			ACALL DELAY
+			ACALL DELAY
+			CLR ELOCK
 			SJMP RESET
 			INCORRECT:
-			CLR LED_GREEN                ; TURN OFF GREEN LED
-			SETB LED_RED                 ; TURN ON RED LED
+			ACALL SEND_PASSWORD
+			MOV DATA_7SEG, #D_CLOSE       ; DISPLAY CLOSE
 			ACALL BUZZER_ON
+			MOV DATA_7SEG, #0xFF
 			ACALL BUZZER_ON
+			MOV DATA_7SEG, #D_CLOSE       ; DISPLAY CLOSE
 			SJMP RESET
-			RESET:		
+			RESET:
+			MOV R0, #00H  ; Set R0 to 0
+			MOV R1, #00H  ; Set R1 to 0
+			MOV R2, #00H  ; Set R2 to 0
+			MOV R3, #00H  ; Set R3 to 0
+			MOV R4, #00H  ; Set R4 to 0
+			MOV R5, #00H  ; Set R5 to 0
 			MOV INDEX, #0                ; RESET INDEX FOR NEXT ENTRY
-			MOV P1, #0xFF				  ; TURN ON ALL SUBMITTED LED
-			MOV DATA_7SEG, #0x89
+			MOV P2, #0x3F				  ; TURN ON ALL SUBMITTED LED
+			MOV DATA_7SEG, #D_CLOSE
 			MOV DPTR, #MA7SEG-1           ; INITIALIZE DPTR WITH ADDRESS OF MA7SEG -1
+			SETB BUZZER
 		RET
 		
 ;===============================================================
@@ -304,50 +340,20 @@ UART_ISR:
 		RET
 	
 	SEND_RESPONSE:
-		MOV A, #'N'                 ; Load ASCII of 'N' into A
+		MOV A, #'S'                 ; Load ASCII of 'N' into A
 		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'E'                 ; Load ASCII of 'E' into A
+		MOV A, #'N'                 ; Load ASCII of 'E' into A
 		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'W'                 ; Load ASCII of 'W' into A
+		MOV A, #'E'                 ; Load ASCII of 'W' into A
 		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #' '                 ; Load ASCII of space into A
+		MOV A, #'W'                 ; Load ASCII of ':' into A
 		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'P'                 ; Load ASCII of 'P' into A
+		MOV A, #'%'                 ; Load ASCII of space into A
 		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'A'                 ; Load ASCII of 'A' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'S'                 ; Load ASCII of 'S' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'S'                 ; Load ASCII of 'S' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'W'                 ; Load ASCII of 'W' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'O'                 ; Load ASCII of 'O' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'R'                 ; Load ASCII of 'R' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #'D'                 ; Load ASCII of 'D' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #':'                 ; Load ASCII of ':' into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, #' '                 ; Load ASCII of space into A
-		ACALL SEND_CHAR             ; Send character via UART
-		MOV A, 0x31              ; Load first digit
+		MOV A, #'%'              ; Load first digit
 		ACALL SEND_CHAR        ; Send character
-		MOV A, 0x32              ; Load second digit
-		ACALL SEND_CHAR        ; Send character
-		MOV A, 0x33            ; Load third digit
-		ACALL SEND_CHAR        ; Send character
-		MOV A, 0x34              ; Load fourth digit
-		ACALL SEND_CHAR        ; Send character	
-		MOV A, 0x35              ; Load fourth digit
-		ACALL SEND_CHAR        ; Send character
-		MOV A, 0x36              ; Load fourth digit
-		ACALL SEND_CHAR        ; Send character
-		MOV A, #0x0D                ; Load ASCII for Carriage Return (CR)		
-		ACALL SEND_CHAR             ; Send CR via UART
-		MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
-		ACALL SEND_CHAR             ; Send LF via UART
+		MOV A, #'%'              ; Load second digit
+		ACALL SEND_CHAR        ; Send charactet
 		RET
 	
 	SEND_CHAR:
@@ -401,15 +407,51 @@ UART_ISR:
 		ACALL SEND_CHAR             ; Send CR via UART
 		MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
 		ACALL SEND_CHAR             ; Send LF via UART
-		RET	
-			
+		RET
+		
+	SEND_PASSWORD:
+		MOV A, #'S'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, R0                     ; SEND 1 OVER UART
+		ACALL SEND_CHAR
+		MOV A, R1                     ; SEND 2 OVER UART
+		ACALL SEND_CHAR
+		MOV A, R2                     ; SEND 3 OVER UART
+		ACALL SEND_CHAR
+		MOV A, R3                     ; SEND 4 OVER UART
+		ACALL SEND_CHAR
+		MOV A, R4                     ; SEND 5 OVER UART
+		ACALL SEND_CHAR
+		MOV A, R5                     ; SEND 6 OVER UART
+		ACALL SEND_CHAR
+		MOV A, #0x0D                ; Load ASCII for Carriage Return (CR)		
+		ACALL SEND_CHAR             ; Send CR via UART
+		MOV A, #0x0A                ; Load ASCII for Line Feed (LF)
+		ACALL SEND_CHAR             ; Send LF via UART	
+		RET
+	SEND_CORRECT:
+		MOV A, #'S'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'%'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'C'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'R'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'C'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'T'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		MOV A, #'%'                    ; SEND S OVER UART
+		ACALL SEND_CHAR
+		RET
 ;===============================================================
 ; Delay subrotines
 ;===============================================================
 BUZZER_ON:
-	SETB BUZZER
-	ACALL DELAY_B
 	CLR BUZZER
+	ACALL DELAY_B
+	SETB BUZZER
 	ACALL DELAY_B
 	RET
 DELAY_B:

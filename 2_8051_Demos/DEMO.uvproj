@@ -377,9 +377,9 @@
           <GroupName>Source Group 1</GroupName>
           <Files>
             <File>
-              <FileName>UART_RECEIVE_AND_SEND.a51</FileName>
+              <FileName>SWEEP_01_09.a51</FileName>
               <FileType>2</FileType>
-              <FilePath>.\UART_RECEIVE_AND_SEND.a51</FilePath>
+              <FilePath>.\SWEEP_01_09.a51</FilePath>
             </File>
           </Files>
         </Group>
@@ -756,9 +756,9 @@
           <GroupName>Source Group 1</GroupName>
           <Files>
             <File>
-              <FileName>UART_RECEIVE_AND_SEND.a51</FileName>
+              <FileName>SWEEP_01_09.a51</FileName>
               <FileType>2</FileType>
-              <FilePath>.\UART_RECEIVE_AND_SEND.a51</FilePath>
+              <FilePath>.\SWEEP_01_09.a51</FilePath>
             </File>
           </Files>
         </Group>
