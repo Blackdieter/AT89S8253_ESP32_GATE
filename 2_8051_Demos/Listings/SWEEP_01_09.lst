@@ -1,0 +1,63 @@
+A51 MACRO ASSEMBLER  SWEEP_01_09                                                          12/11/2024 09:18:30 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+NO OBJECT MODULE REQUESTED
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE SWEEP_01_09.a51 SET(SMALL) DEBUG PRINT(.\Listings\SWEEP_01_09.lst) OBJE
+                      CT(.\Objects\SWEEP_01_09.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+                       1     ;================================= 
+                       2     ; tao xung vuong 
+                       3     ;================================= 
+                       4     ;tan so thach anh 11.0592MHz 
+                       5     ;================================= 
+                       6     
+                       7     ; su dung timer0 mode 2 de tao tan so xung vuong f=5kHz 
+                       8     ;================================= 
+0000                   9     org 0 
+0000 02000E           10     ljmp main 
+000B                  11     org 0bh
+000B 02001F           12             ljmp interupt_timer0 
+                      13     
+000E                  14     main:  
+000E 758902           15             mov tmod,#2 
+0011 758A9C           16             mov tl0,#0x9Ch 
+*** ______________________________________________^
+*** ERROR #A1 IN 16 (SWEEP_01_09.a51, LINE 16): ILLEGAL CHARACTER IN NUMERIC CONSTANT
+0014 758C9C           17             mov th0,#0x9Ch ; Kha nang thay dung 11.0562Mhz de them truyen thong
+*** ______________________________________________^
+*** ERROR #A1 IN 17 (SWEEP_01_09.a51, LINE 17): ILLEGAL CHARACTER IN NUMERIC CONSTANT
+                      18             ; Co the dung 12Mhz voi tl0=th0=156=#0x9Ch
+0017 D28C             19             setb tr0 
+0019 D2A9             20             setb et0 
+001B D2AF             21             setb ea 
+001D 80FE             22             sjmp $ 
+001F                  23     interupt_timer0:  
+001F B2A0             24             cpl p2.0 ;dao chan p2.0 
+0021 32               25             reti  
+                      26     end
+A51 MACRO ASSEMBLER  SWEEP_01_09                                                          12/11/2024 09:18:30 PAGE     2
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+EA . . . . . . . .  B ADDR   00A8H.7 A   
+ET0. . . . . . . .  B ADDR   00A8H.1 A   
+INTERUPT_TIMER0. .  C ADDR   001FH   A   
+MAIN . . . . . . .  C ADDR   000EH   A   
+P2 . . . . . . . .  D ADDR   00A0H   A   
+TH0. . . . . . . .  D ADDR   008CH   A   
+TL0. . . . . . . .  D ADDR   008AH   A   
+TMOD . . . . . . .  D ADDR   0089H   A   
+TR0. . . . . . . .  B ADDR   0088H.4 A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 2 ERROR(S)
