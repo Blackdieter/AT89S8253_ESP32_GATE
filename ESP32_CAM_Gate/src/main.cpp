@@ -29,16 +29,16 @@
 #define RX_BUFFER_SIZE 128
 
 // Replace with your network credentials
-const char* ssid = "AnhKul3";
-const char* password = "0904155345";
+const char* ssid = "LacPhuongTienSinh";
+const char* password = "11112222";
 const char *webAppUrl = "https://script.google.com/macros/s/AKfycbwj80c6y4c6AFBSVYJ0apv5K--mqbFIDze973GA-V3Lhvadi3bL3peg8ujikoQcYfBX/exec";
 // Set your Static IP address 
-IPAddress local_IP(192, 168, 1, 184); 
+// IPAddress local_IP(192, 168, 1, 12); 
 // Set your Gateway IP address 
-IPAddress gateway(192, 168, 1, 1); 
-IPAddress subnet(255, 255, 0, 0); 
-IPAddress primaryDNS(8, 8, 8, 8);   //optional 
-IPAddress secondaryDNS(8, 8, 4, 4); //optional
+// IPAddress gateway(192, 168, 1, 1); 
+// IPAddress subnet(255, 255, 0, 0); 
+// IPAddress primaryDNS(8, 8, 8, 8);   //optional 
+// IPAddress secondaryDNS(8, 8, 4, 4); //optional
 
 // NTP Server
 const char* ntpServer = "pool.ntp.org";
@@ -398,9 +398,10 @@ void setup() {
   Serial.begin(9600);
   initSPIFFS();
   // Connect to Wi-Fi
-  if(!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) { 
-  Serial.println("STA Failed to configure"); 
-  } 
+  // Connect to Wi-Fi
+  // if(!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) { 
+  // Serial.println("STA Failed to configure"); 
+  // } 
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
